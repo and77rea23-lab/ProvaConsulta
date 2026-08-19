@@ -1,31 +1,68 @@
 
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Consulta FLR</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestione Budget</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #000000;
-    }
-    iframe {
-      width: 100%;
-      height: 100vh;
-      border: none;
-      display: block;
-    }
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #007bff; color: white; }
+    input { width: 90%; padding: 5px; }
+    .total { font-size: 1.2em; font-weight: bold; color: #28a745; }
   </style>
 </head>
 <body>
 
-  <iframe src="https://consultaflr.glideos.app/" allow="geolocation; microphone; camera"></iframe>
+  <h2>Tabella Preventivo e Budget Automatico</h2>
 
+  <table id="budgetTable">
+    <thead>
+      <tr>
+        <th>Voce / Descrizione</th>
+        <th>Quantità</th>
+        <th>Prezzo Unitario (€)</th>
+        <th>Totale Colonna (€)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input type="text" value="Servizio A"></td>
+        <td><input type="number" class="qty" value="1" oninput="calcola()"></td>
+        <td><input type="number" class="price" value="100" oninput="calcola()"></td>
+        <td class="row-total">100.00</td>
+      </tr>
+      <tr>
+        <td><input type="text" value="Servizio B"></td>
+        <td><input type="number" class="qty" value="2" oninput="calcola()"></td>
+        <td><input type="number" class="price" value="50" oninput="calcola()"></td>
+        <td class="row-total">100.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="total">Budget Totale Calcolato: € <span id="grandTotal">200.00</span></div>
+
+  <script>
+    function calcola() {
+      let qtys = document.querySelectorAll('.qty');
+      let prices = document.querySelectorAll('.price');
+      let rowTotals = document.querySelectorAll('.row-total');
+      let grandTotal = 0;
+
+      for (let i = 0; i < qtys.length; i++) {
+        let q = parseFloat(qtys[i].value) || 0;
+        let p = parseFloat(prices[i].value) || 0;
+        let tot = q * p;
+        rowTotals[i].innerText = tot.toFixed(2);
+        grandTotal += tot;
+      }
+
+      document.getElementById('grandTotal').innerText = grandTotal.toFixed(2);
+    }
+  </script>
 </body>
 </html>
-
