@@ -3,19 +3,29 @@
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  
-  <!-- Configurazione PWA e Icone -->
-  <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
-  <link rel="icon" type="image/png" sizes="256x256" href="https://g3-app-assets-prod.glide-g3.workers.dev/p/2128dc43-677e-4415-a53c-14839cc2b777/e6011802db337b924d42bf7c18343ab8ec3085962aec54e2ece54abb589ac237/app-icon.png" />
-  <link rel="apple-touch-icon" />
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Consulta FLR</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+    }
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-  <!-- Contenitore radice: Glide inietta l'intera interfaccia qui dentro -->
-  <div id="root"></div>
 
-  <!-- Script e librerie JavaScript per la resa grafica dell'app -->
+  <iframe src="https://consultaflr.glideos.app/" allow="geolocation; microphone; camera"></iframe>
+
 </body>
 </html>
+
