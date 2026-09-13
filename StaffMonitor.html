@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StaffMonitor - Aeroporto di Firenze (Live Fetch)</title>
+  <title>Staff Monitor - Aeroporto di Firenze (FLR Live)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Narrow', Arial, sans-serif; }
     body { background-color: #ffffff; color: #000000; padding: 5px; font-size: 11px; }
@@ -60,14 +60,16 @@
     .box-sched { background-color: #1a1a1a; color: #ffcc00; }
     .box-exp { background-color: #1a1a1a; color: #ffffff; }
     .table-arrivals .box-exp { color: #ffee00; }
+    
+    .error-msg { color: #ff6b6b; padding: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="filter-bar">
-    <span>CONNESSIONE LIVE FLR:</span>
-    <span id="sync-status" class="status-badge">Connessione in corso...</span>
-    <button onclick="fetchLiveFlightData()" style="padding: 2px 8px; cursor: pointer; font-size: 10px;">Aggiorna Ora</button>
+    <span>STATO CONNESSIONE FLR:</span>
+    <span id="sync-status" class="status-badge">Inizializzazione...</span>
+    <button onclick="fetchLiveFlightData()" style="padding: 2px 8px; cursor: pointer; font-size: 10px;">Riprova Connessione</button>
     <div class="clock-display" id="live-clock">--:--:--</div>
   </div>
 
@@ -95,7 +97,7 @@
         </tr>
       </thead>
       <tbody id="departures-rows">
-        <tr><td colspan="16" style="padding: 10px; color: #aaa;">Caricamento dati live in corso...</td></tr>
+        <tr><td colspan="16" style="padding: 10px; color: #aaa;">In attesa di risposta dal server...</td></tr>
       </tbody>
     </table>
   </div>
@@ -122,7 +124,7 @@
         </tr>
       </thead>
       <tbody id="arrivals-rows">
-        <tr><td colspan="14" style="padding: 10px; color: #aaa;">Caricamento dati live in corso...</td></tr>
+        <tr><td colspan="14" style="padding: 10px; color: #aaa;">In attesa di risposta dal server...</td></tr>
       </tbody>
     </table>
   </div>
@@ -135,108 +137,71 @@
 
     async function fetchLiveFlightData() {
       const statusBadge = document.getElementById('sync-status');
-      statusBadge.textContent = "Sincronizzazione...";
+      statusBadge.textContent = "Connessione in corso...";
       statusBadge.className = "status-badge";
 
-      // URL del sito ufficiale dell'Aeroporto di Firenze
-      const flrUrl = 'https://www.aeroporto.firenze.it/it/i-passeggeri/in-aeroporto/voli-in-tempo-reale.html';
-      
-      // Proxy CORS per bypassare il blocco Same-Origin del browser
-      const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(flrUrl);
+      // URL API Aviationstack per l'aeroporto FLR (Sostituire YOUR_API_KEY con la chiave API)
+      const apiKey = 'YOUR_API_KEY';
+      const apiUrl = `https://api.aviationstack.com/v1/flights?access_key=${apiKey}&dep_iata=FLR`;
 
       try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error("Errore risposta proxy");
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Errore HTTP: " + response.status);
         
-        const data = await response.json();
-        if (!data.contents) throw new Error("Nessun contenuto ricevuto");
+        const result = await response.json();
+        if (!result.data) throw new Error("Risposta API non valida o limit raggiunti");
 
-        // Parsing dell'HTML pubblico dell'aeroporto
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
+        renderApiData(result.data);
 
-        // Estrazione dati tabelle reali
-        parseAndRenderTables(doc);
-
-        statusBadge.textContent = "Dati Live Aggiornati";
+        statusBadge.textContent = "Dati API Live Connessi";
         statusBadge.className = "status-badge online";
       } catch (err) {
-        console.error("Errore fetch live:", err);
-        statusBadge.textContent = "Errore Sincronizzazione CORS/Cloudflare";
+        console.error("Errore connessione:", err);
+        statusBadge.textContent = "Blocco Protezione Sito / Errore CORS";
         statusBadge.className = "status-badge error";
+
+        const errHtml = `<tr><td colspan="16" class="error-msg">Impossibile scaricare l'HTML diretto: la pagina dell'aeroporto blocca le richieste client-side (CORS/Cloudflare). È richiesta un'API key attiva.</td></tr>`;
+        document.getElementById('departures-rows').innerHTML = errHtml;
+        document.getElementById('arrivals-rows').innerHTML = errHtml;
       }
     }
 
-    function parseAndRenderTables(doc) {
-      // Estrazione righe dalla pagina remota
-      const rows = doc.querySelectorAll('table tbody tr');
-      
+    function renderApiData(flights) {
       let depHtml = '';
       let arrHtml = '';
-      let depCount = 0;
-      let arrCount = 0;
 
-      rows.forEach(row => {
-        const text = row.innerText.trim();
-        const cells = row.querySelectorAll('td');
-        
-        if (cells.length >= 4) {
-          const time = cells[0]?.innerText.trim() || '--:--';
-          const flight = cells[1]?.innerText.trim() || 'N/A';
-          const city = cells[2]?.innerText.trim() || 'N/A';
-          const status = cells[3]?.innerText.trim() || 'SCHEDULED';
+      flights.forEach(item => {
+        const flightNo = item.flight?.iata || item.flight?.number || 'N/A';
+        const acType = item.aircraft?.iata || '--';
+        const reg = item.aircraft?.registration || '--';
+        const schedTime = item.departure?.scheduled ? item.departure.scheduled.substring(11, 16) : '--:--';
+        const status = item.flight_status ? item.flight_status.toUpperCase() : 'SCHEDULED';
+        const dest = item.arrival?.airport || 'N/A';
 
-          // Distinzione o estrazione automatica Partenze / Arrivi
-          if (text.toLowerCase().includes('partenza') || depCount <= arrCount) {
-            depCount++;
-            depHtml += `
-              <tr class="data-row">
-                <td class="col-flight">${flight}</td>
-                <td>--</td>
-                <td style="color:#aaa;">Linea</td>
-                <td>--</td>
-                <td class="col-city">${city}</td>
-                <td></td>
-                <td><span class="box-time box-sched">${time}</span></td>
-                <td><span class="box-time box-exp">${time}</span></td>
-                <td></td>
-                <td></td>
-                <td>${status}</td>
-                <td>--</td>
-                <td></td>
-                <td>--</td>
-                <td></td>
-              </tr>`;
-          } else {
-            arrCount++;
-            arrHtml += `
-              <tr class="data-row">
-                <td class="col-flight">${flight}</td>
-                <td>--</td>
-                <td style="color:#aaa;">Linea</td>
-                <td>--</td>
-                <td class="col-city">${city}</td>
-                <td><span class="box-time box-sched">${time}</span></td>
-                <td><span class="box-time box-exp">${time}</span></td>
-                <td></td>
-                <td></td>
-                <td>${status}</td>
-                <td>--</td>
-                <td>--</td>
-                <td></td>
-              </tr>`;
-          }
-        }
+        depHtml += `
+          <tr class="data-row">
+            <td class="col-flight">${flightNo}</td>
+            <td>${acType}</td>
+            <td style="color:#aaa;">Linea</td>
+            <td>${reg}</td>
+            <td class="col-city">${dest}</td>
+            <td></td>
+            <td><span class="box-time box-sched">${schedTime}</span></td>
+            <td><span class="box-time box-exp">${schedTime}</span></td>
+            <td></td>
+            <td></td>
+            <td>${status}</td>
+            <td>--</td>
+            <td></td>
+            <td>--</td>
+            <td></td>
+          </tr>`;
       });
 
       if (depHtml !== '') document.getElementById('departures-rows').innerHTML = depHtml;
-      if (arrHtml !== '') document.getElementById('arrivals-rows').innerHTML = arrHtml;
     }
 
-    // Avvio e aggiornamento automatico ogni 60 secondi
     setInterval(updateClock, 1000);
-    setInterval(fetchLiveFlightData, 60000);
-    
     updateClock();
     fetchLiveFlightData();
   </script>
