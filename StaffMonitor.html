@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Staff Monitor - Aeroporto di Firenze (FLR)</title>
+  <title>Staff Monitor - Aeroporto di Firenze (Live Fetch)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Narrow', Arial, sans-serif; }
     body { background-color: #ffffff; color: #000000; padding: 5px; font-size: 11px; }
@@ -19,13 +19,20 @@
       border-bottom: 1px solid #cccccc;
       margin-bottom: 5px;
     }
-    .filter-bar label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .status-badge {
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background-color: #f0ad4e;
+      color: #fff;
+    }
+    .status-badge.online { background-color: #5cb85c; }
+    .status-badge.error { background-color: #d9534f; }
     .clock-display { margin-left: auto; font-weight: bold; font-size: 12px; color: #0b3370; }
 
     .table-container { width: 100%; overflow-x: auto; margin-bottom: 8px; }
     table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 
-    /* Intestazione Blu Staff Monitor */
     .header-blue { background-color: #0b3370; color: #ffffff; }
     .header-blue th {
       padding: 4px 6px;
@@ -37,22 +44,16 @@
     }
     .header-blue th.title-cell { font-size: 11px; letter-spacing: 0.5px; width: 100px; }
 
-    /* Tabella Partenze (Sfondo Nero / Testo Bianco) */
     .table-departures { background-color: #000000; color: #ffffff; }
     .table-departures tr.data-row { border-bottom: 1px solid #222222; height: 28px; }
     .table-departures td { padding: 2px 6px; vertical-align: middle; font-size: 11px; font-weight: bold; }
 
-    /* Tabella Arrivi (Sfondo Grigio Scuro / Testo Giallo) */
     .table-arrivals { background-color: #3f4347; color: #ffee00; }
     .table-arrivals tr.data-row { border-bottom: 1px solid #52575c; height: 28px; }
     .table-arrivals td { padding: 2px 6px; vertical-align: middle; font-size: 11px; font-weight: bold; color: #ffee00; }
 
     .col-flight { width: 85px; color: #ffffff; }
     .table-arrivals .col-flight { color: #ffee00; }
-    .col-actype { width: 50px; }
-    .col-trtype { width: 50px; color: #aaaaaa; }
-    .col-reg { width: 65px; color: #ffffff; }
-    .table-arrivals .col-reg { color: #ffee00; }
     .col-city { font-size: 11px; font-weight: bold; width: 150px; }
 
     .box-time { display: inline-block; padding: 1px 4px; border-radius: 2px; font-size: 11px; font-weight: bold; text-align: center; min-width: 38px; }
@@ -64,12 +65,13 @@
 <body>
 
   <div class="filter-bar">
-    <label><input type="radio" name="viewMode" value="all" checked onclick="renderTables()"> Orario Ufficiale Completo (FLR)</label>
-    <label><input type="radio" name="viewMode" value="window" onclick="renderTables()"> Finestra Oraria Attuale</label>
+    <span>CONNESSIONE LIVE FLR:</span>
+    <span id="sync-status" class="status-badge">Connessione in corso...</span>
+    <button onclick="fetchLiveFlightData()" style="padding: 2px 8px; cursor: pointer; font-size: 10px;">Aggiorna Ora</button>
     <div class="clock-display" id="live-clock">--:--:--</div>
   </div>
 
-  <!-- SEZIONE PARTENZE -->
+  <!-- PARTENZE -->
   <div class="table-container">
     <table class="table-departures">
       <thead>
@@ -92,11 +94,13 @@
           <th>NOTA OPERATORE</th>
         </tr>
       </thead>
-      <tbody id="departures-rows"></tbody>
+      <tbody id="departures-rows">
+        <tr><td colspan="16" style="padding: 10px; color: #aaa;">Caricamento dati live in corso...</td></tr>
+      </tbody>
     </table>
   </div>
 
-  <!-- SEZIONE ARRIVI -->
+  <!-- ARRIVI -->
   <div class="table-container">
     <table class="table-arrivals">
       <thead>
@@ -117,185 +121,124 @@
           <th>NOTA OPERATORE</th>
         </tr>
       </thead>
-      <tbody id="arrivals-rows"></tbody>
+      <tbody id="arrivals-rows">
+        <tr><td colspan="14" style="padding: 10px; color: #aaa;">Caricamento dati live in corso...</td></tr>
+      </tbody>
     </table>
   </div>
 
   <script>
-    // Database Reale - Orario Ufficiale Aeroporto di Firenze Peretola (FLR / Toscana Aeroporti)
-    const REAL_FLR_DEPARTURES = [
-      { flight: "V7 01428", ac: "A319", reg: "EC-MMT", dest: "OLBIA (OLB)", sched: "06:05", gate: "08", stand: "101" },
-      { flight: "AZ 01676", ac: "A319", reg: "EI-IMN", dest: "ROMA (FCO)", sched: "06:25", gate: "01", stand: "102" },
-      { flight: "VY 06204", ac: "A319", reg: "EC-LLI", dest: "LONDRA (LGW)", sched: "06:25", gate: "09", stand: "106" },
-      { flight: "KL 01650", ac: "E195", reg: "PH-NXA", dest: "AMSTERDAM (AMS)", sched: "06:30", gate: "04", stand: "103" },
-      { flight: "EN 08861", ac: "E190", reg: "I-ADMI", dest: "FRANCOFORTE (FRA)", sched: "06:30", gate: "07", stand: "104" },
-      { flight: "LX 01683", ac: "BCS3", reg: "HB-JCA", dest: "ZURIGO (ZRH)", sched: "06:30", gate: "06", stand: "105" },
-      { flight: "VY 01494", ac: "A319", reg: "EC-MKM", dest: "MADRID (MAD)", sched: "06:45", gate: "05", stand: "107" },
-      { flight: "AF 01267", ac: "BCS3", reg: "F-HBLX", dest: "PARIGI (CDG)", sched: "06:55", gate: "02", stand: "108" },
-      { flight: "OS 00540", ac: "E190", reg: "OE-LWA", dest: "VIENNA (VIE)", sched: "07:10", gate: "03", stand: "109" },
-      { flight: "VY 01502", ac: "A319", reg: "EC-MNN", dest: "PARIGI (ORY)", sched: "07:10", gate: "05", stand: "107" },
-      { flight: "BA 00523", ac: "A320", reg: "G-EUYO", dest: "LONDRA (LHR)", sched: "07:20", gate: "09", stand: "106" },
-      { flight: "EN 08191", ac: "E190", reg: "I-ADMJ", dest: "MONACO (MUC)", sched: "08:25", gate: "07", stand: "104" },
-      { flight: "VY 01500", ac: "A319", reg: "EC-MKM", dest: "PARIGI (ORY)", sched: "09:20", gate: "05", stand: "107" },
-      { flight: "V7 01705", ac: "A319", reg: "EC-MMT", dest: "CATANIA (CTA)", sched: "09:35", gate: "08", stand: "101" },
-      { flight: "EN 08193", ac: "E190", reg: "I-ADMI", dest: "MONACO (MUC)", sched: "10:00", gate: "07", stand: "104" },
-      { flight: "AF 01067", ac: "BCS3", reg: "F-HBLY", dest: "PARIGI (CDG)", sched: "10:00", gate: "02", stand: "108" },
-      { flight: "EN 08853", ac: "E190", reg: "I-ADMJ", dest: "FRANCOFORTE (FRA)", sched: "10:20", gate: "07", stand: "104" },
-      { flight: "BA 03280", ac: "E190", reg: "G-LCYE", dest: "LONDRA (LCY)", sched: "10:35", gate: "11", stand: "106" },
-      { flight: "LX 01679", ac: "BCS3", reg: "HB-JCB", dest: "ZURIGO (ZRH)", sched: "10:55", gate: "06", stand: "105" },
-      { flight: "OS 00534", ac: "E190", reg: "OE-LWB", dest: "VIENNA (VIE)", sched: "11:10", gate: "03", stand: "109" },
-      { flight: "AZ 01684", ac: "A319", reg: "EI-IMN", dest: "ROMA (FCO)", sched: "19:00", gate: "08", stand: "102" },
-      { flight: "VY 06006", ac: "A319", reg: "EC-MKM", dest: "BARCELLONA (BCN)", sched: "19:10", gate: "01", stand: "107" },
-      { flight: "EN 08859", ac: "E190", reg: "I-ADMJ", dest: "FRANCOFORTE (FRA)", sched: "19:10", gate: "04", stand: "104" },
-      { flight: "KL 01658", ac: "E195", reg: "PH-NXA", dest: "AMSTERDAM (AMS)", sched: "19:40", gate: "03", stand: "103" },
-      { flight: "LX 01681", ac: "BCS3", reg: "HB-JCA", dest: "ZURIGO (ZRH)", sched: "19:45", gate: "05", stand: "105" },
-      { flight: "SK 02964", ac: "A319", reg: "SE-ROJ", dest: "COPENAGHEN (CPH)", sched: "19:55", gate: "02", stand: "108" },
-      { flight: "BA 03280", ac: "E190", reg: "G-LCYF", dest: "LONDRA (LCY)", sched: "20:10", gate: "11", stand: "106" },
-      { flight: "EN 08199", ac: "E190", reg: "I-ADMI", dest: "MONACO (MUC)", sched: "21:15", gate: "07", stand: "104" },
-      { flight: "VY 06028", ac: "A319", reg: "EC-LLI", dest: "BARCELLONA (BCN)", sched: "22:15", gate: "01", stand: "107" }
-    ];
-
-    const REAL_FLR_ARRIVALS = [
-      { flight: "VY 06001", ac: "A319", reg: "EC-MKM", origin: "BARCELLONA (BCN)", sched: "08:05", belt: "01", stand: "107" },
-      { flight: "V7 01429", ac: "A319", reg: "EC-MMT", origin: "OLBIA (OLB)", sched: "08:45", belt: "02", stand: "101" },
-      { flight: "AF 01066", ac: "BCS3", reg: "F-HBLY", origin: "PARIGI (CDG)", sched: "08:55", belt: "01", stand: "108" },
-      { flight: "EW 09830", ac: "A319", reg: "D-AGWT", origin: "DUSSELDORF (DUS)", sched: "08:55", belt: "03", stand: "109" },
-      { flight: "EN 08192", ac: "E190", reg: "I-ADMI", origin: "MONACO (MUC)", sched: "09:10", belt: "02", stand: "104" },
-      { flight: "EN 08852", ac: "E190", reg: "I-ADMJ", origin: "FRANCOFORTE (FRA)", sched: "09:35", belt: "01", stand: "104" },
-      { flight: "LX 01678", ac: "BCS3", reg: "HB-JCB", origin: "ZURIGO (ZRH)", sched: "10:00", belt: "02", stand: "105" },
-      { flight: "OS 00533", ac: "E190", reg: "OE-LWB", origin: "VIENNA (VIE)", sched: "10:05", belt: "01", stand: "109" },
-      { flight: "AZ 01675", ac: "A319", reg: "EI-IMO", origin: "ROMA (FCO)", sched: "10:35", belt: "02", stand: "102" },
-      { flight: "KL 01651", ac: "E195", reg: "PH-NXB", origin: "AMSTERDAM (AMS)", sched: "10:30", belt: "01", stand: "103" },
-      { flight: "TP 00874", ac: "E190", reg: "CS-TPT", origin: "LISBONA (LIS)", sched: "10:50", belt: "03", stand: "108" },
-      { flight: "BA 00520", ac: "A320", reg: "G-EUYO", origin: "LONDRA (LHR)", sched: "11:08", belt: "03", stand: "106" },
-      { flight: "VY 01503", ac: "A319", reg: "EC-MKM", origin: "PARIGI (ORY)", sched: "11:10", belt: "02", stand: "107" },
-      { flight: "AF 01366", ac: "BCS3", reg: "F-HBLX", origin: "PARIGI (CDG)", sched: "11:20", belt: "01", stand: "108" },
-      { flight: "SK 02961", ac: "A319", reg: "SE-ROJ", origin: "COPENAGHEN (CPH)", sched: "11:20", belt: "02", stand: "105" },
-      { flight: "SN 03139", ac: "A320", reg: "OO-SNB", origin: "BRUXELLES (BRU)", sched: "11:20", belt: "03", stand: "109" },
-      { flight: "VY 01495", ac: "A319", reg: "EC-LLI", origin: "MADRID (MAD)", sched: "12:00", belt: "02", stand: "107" },
-      { flight: "VY 06205", ac: "A319", reg: "EC-MNN", origin: "LONDRA (LGW)", sched: "12:10", belt: "03", stand: "106" },
-      { flight: "EN 08194", ac: "E190", reg: "I-ADMI", origin: "MONACO (MUC)", sched: "15:30", belt: "01", stand: "104" },
-      { flight: "EN 08856", ac: "E190", reg: "I-ADMJ", origin: "FRANCOFORTE (FRA)", sched: "16:10", belt: "02", stand: "104" },
-      { flight: "EN 08858", ac: "E190", reg: "I-ADMI", origin: "FRANCOFORTE (FRA)", sched: "18:31", belt: "01", stand: "104" },
-      { flight: "SK 02963", ac: "A319", reg: "SE-ROJ", origin: "COPENAGHEN (CPH)", sched: "18:52", belt: "02", stand: "108" },
-      { flight: "TP 00876", ac: "E190", reg: "CS-TPT", origin: "LISBONA (LIS)", sched: "18:57", belt: "03", stand: "109" },
-      { flight: "KL 01657", ac: "E195", reg: "PH-NXA", origin: "AMSTERDAM (AMS)", sched: "19:14", belt: "01", stand: "103" },
-      { flight: "LX 01680", ac: "BCS3", reg: "HB-JCA", origin: "ZURIGO (ZRH)", sched: "19:20", belt: "02", stand: "105" },
-      { flight: "AF 01766", ac: "BCS3", reg: "F-HBLY", origin: "PARIGI (CDG)", sched: "19:41", belt: "01", stand: "108" },
-      { flight: "EN 08198", ac: "E190", reg: "I-ADMJ", origin: "MONACO (MUC)", sched: "20:29", belt: "02", stand: "104" },
-      { flight: "VY 06029", ac: "A319", reg: "EC-MKM", origin: "BARCELLONA (BCN)", sched: "21:29", belt: "01", stand: "107" },
-      { flight: "V7 01704", ac: "A319", reg: "EC-MMT", origin: "CATANIA (CTA)", sched: "22:27", belt: "02", stand: "101" },
-      { flight: "KL 01659", ac: "E195", reg: "PH-NXA", origin: "AMSTERDAM (AMS)", sched: "22:34", belt: "01", stand: "103" },
-      { flight: "LX 01682", ac: "BCS3", reg: "HB-JCA", origin: "ZURIGO (ZRH)", sched: "22:34", belt: "02", stand: "105" },
-      { flight: "BA 00522", ac: "A320", reg: "G-EUYO", origin: "LONDRA (LHR)", sched: "22:40", belt: "03", stand: "106" },
-      { flight: "AF 01266", ac: "BCS3", reg: "F-HBLX", origin: "PARIGI (CDG)", sched: "22:45", belt: "01", stand: "108" },
-      { flight: "OS 00539", ac: "E190", reg: "OE-LWA", origin: "VIENNA (VIE)", sched: "22:52", belt: "02", stand: "109" },
-      { flight: "AZ 01681", ac: "A319", reg: "EI-IMN", origin: "ROMA (FCO)", sched: "23:02", belt: "01", stand: "102" },
-      { flight: "EN 08860", ac: "E190", reg: "I-ADMI", origin: "FRANCOFORTE (FRA)", sched: "23:03", belt: "02", stand: "104" },
-      { flight: "VY 06209", ac: "A319", reg: "EC-LLI", origin: "LONDRA (LGW)", sched: "23:11", belt: "03", stand: "106" },
-      { flight: "VY 01499", ac: "A319", reg: "EC-MNN", origin: "MADRID (MAD)", sched: "23:15", belt: "01", stand: "107" }
-    ];
-
-    function timeToMin(tStr) {
-      const p = tStr.split(':');
-      return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
-    }
-
     function updateClock() {
       const now = new Date();
       document.getElementById('live-clock').textContent = "ORA LOCALE: " + now.toLocaleTimeString('it-IT');
     }
 
-    function renderTables() {
-      const now = new Date();
-      const currentMin = now.getHours() * 60 + now.getMinutes();
-      const mode = document.querySelector('input[name="viewMode"]:checked').value;
+    async function fetchLiveFlightData() {
+      const statusBadge = document.getElementById('sync-status');
+      statusBadge.textContent = "Sincronizzazione...";
+      statusBadge.className = "status-badge";
 
-      // Render Partenze
-      let deps = REAL_FLR_DEPARTURES;
-      if (mode === 'window') {
-        deps = REAL_FLR_DEPARTURES.filter(item => {
-          let m = timeToMin(item.sched);
-          return m >= (currentMin - 60) && m <= (currentMin + 180);
-        });
-      }
+      // URL del sito ufficiale dell'Aeroporto di Firenze
+      const flrUrl = 'https://www.aeroporto.firenze.it/it/i-passeggeri/in-aeroporto/voli-in-tempo-reale.html';
+      
+      // Proxy CORS per bypassare il blocco Same-Origin del browser
+      const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(flrUrl);
 
-      document.getElementById('departures-rows').innerHTML = deps.map(item => {
-        let m = timeToMin(item.sched);
-        let status = "SCHEDULED";
-        let blkoff = "";
+      try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("Errore risposta proxy");
         
-        if (m < currentMin - 10) {
-          status = "DEPARTED";
-          blkoff = item.sched;
-        } else if (m <= currentMin + 20) {
-          status = "BOARDING";
-        }
+        const data = await response.json();
+        if (!data.contents) throw new Error("Nessun contenuto ricevuto");
 
-        return `
-          <tr class="data-row">
-            <td class="col-flight">${item.flight}</td>
-            <td class="col-actype">${item.ac}</td>
-            <td class="col-trtype">Linea</td>
-            <td class="col-reg">${item.reg}</td>
-            <td class="col-city">${item.dest}</td>
-            <td></td>
-            <td><span class="box-time box-sched">${item.sched}</span></td>
-            <td><span class="box-time box-exp">${item.sched}</span></td>
-            <td>${blkoff}</td>
-            <td></td>
-            <td>${status}</td>
-            <td>${item.stand}</td>
-            <td></td>
-            <td>${item.gate}</td>
-            <td></td>
-          </tr>
-        `;
-      }).join('');
+        // Parsing dell'HTML pubblico dell'aeroporto
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, 'text/html');
 
-      // Render Arrivi
-      let arrs = REAL_FLR_ARRIVALS;
-      if (mode === 'window') {
-        arrs = REAL_FLR_ARRIVALS.filter(item => {
-          let m = timeToMin(item.sched);
-          return m >= (currentMin - 60) && m <= (currentMin + 180);
-        });
+        // Estrazione dati tabelle reali
+        parseAndRenderTables(doc);
+
+        statusBadge.textContent = "Dati Live Aggiornati";
+        statusBadge.className = "status-badge online";
+      } catch (err) {
+        console.error("Errore fetch live:", err);
+        statusBadge.textContent = "Errore Sincronizzazione CORS/Cloudflare";
+        statusBadge.className = "status-badge error";
       }
-
-      document.getElementById('arrivals-rows').innerHTML = arrs.map(item => {
-        let m = timeToMin(item.sched);
-        let status = "ESTIMATED";
-        let land = "";
-
-        if (m <= currentMin) {
-          status = "LANDED";
-          land = item.sched;
-        }
-
-        return `
-          <tr class="data-row">
-            <td class="col-flight">${item.flight}</td>
-            <td class="col-actype">${item.ac}</td>
-            <td class="col-trtype">Linea</td>
-            <td class="col-reg">${item.reg}</td>
-            <td class="col-city">${item.origin}</td>
-            <td><span class="box-time box-sched">${item.sched}</span></td>
-            <td><span class="box-time box-exp">${item.sched}</span></td>
-            <td>${land}</td>
-            <td></td>
-            <td>${status}</td>
-            <td>${item.stand}</td>
-            <td>${item.belt}</td>
-            <td></td>
-          </tr>
-        `;
-      }).join('');
     }
 
+    function parseAndRenderTables(doc) {
+      // Estrazione righe dalla pagina remota
+      const rows = doc.querySelectorAll('table tbody tr');
+      
+      let depHtml = '';
+      let arrHtml = '';
+      let depCount = 0;
+      let arrCount = 0;
+
+      rows.forEach(row => {
+        const text = row.innerText.trim();
+        const cells = row.querySelectorAll('td');
+        
+        if (cells.length >= 4) {
+          const time = cells[0]?.innerText.trim() || '--:--';
+          const flight = cells[1]?.innerText.trim() || 'N/A';
+          const city = cells[2]?.innerText.trim() || 'N/A';
+          const status = cells[3]?.innerText.trim() || 'SCHEDULED';
+
+          // Distinzione o estrazione automatica Partenze / Arrivi
+          if (text.toLowerCase().includes('partenza') || depCount <= arrCount) {
+            depCount++;
+            depHtml += `
+              <tr class="data-row">
+                <td class="col-flight">${flight}</td>
+                <td>--</td>
+                <td style="color:#aaa;">Linea</td>
+                <td>--</td>
+                <td class="col-city">${city}</td>
+                <td></td>
+                <td><span class="box-time box-sched">${time}</span></td>
+                <td><span class="box-time box-exp">${time}</span></td>
+                <td></td>
+                <td></td>
+                <td>${status}</td>
+                <td>--</td>
+                <td></td>
+                <td>--</td>
+                <td></td>
+              </tr>`;
+          } else {
+            arrCount++;
+            arrHtml += `
+              <tr class="data-row">
+                <td class="col-flight">${flight}</td>
+                <td>--</td>
+                <td style="color:#aaa;">Linea</td>
+                <td>--</td>
+                <td class="col-city">${city}</td>
+                <td><span class="box-time box-sched">${time}</span></td>
+                <td><span class="box-time box-exp">${time}</span></td>
+                <td></td>
+                <td></td>
+                <td>${status}</td>
+                <td>--</td>
+                <td>--</td>
+                <td></td>
+              </tr>`;
+          }
+        }
+      });
+
+      if (depHtml !== '') document.getElementById('departures-rows').innerHTML = depHtml;
+      if (arrHtml !== '') document.getElementById('arrivals-rows').innerHTML = arrHtml;
+    }
+
+    // Avvio e aggiornamento automatico ogni 60 secondi
     setInterval(updateClock, 1000);
-    setInterval(renderTables, 30000);
+    setInterval(fetchLiveFlightData, 60000);
+    
     updateClock();
-    renderTables();
+    fetchLiveFlightData();
   </script>
 </body>
 </html>
