@@ -1,1 +1,171 @@
 
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aeroporto di Firenze (FLR) - Tabellone Arrivi e Partenze Live</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    body {
+      background-color: #050505;
+      color: #ffffff;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .airport-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #111;
+      padding: 15px 20px;
+      border-radius: 6px;
+      border-left: 5px solid #ffb400;
+    }
+
+    .airport-title {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ffb400;
+      letter-spacing: 2px;
+    }
+
+    .live-clock {
+      font-size: 26px;
+      color: #00ff66;
+      font-weight: bold;
+    }
+
+    /* SEZIONE PARTE ALTA: PARTENZE (SFONDO NERO) */
+    .section-departures {
+      background-color: #000000;
+      border: 2px solid #222;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+    }
+
+    /* SEZIONE PARTE BASSA: ARRIVI (SFONDO GRIGIO) */
+    .section-arrivals {
+      background-color: #1e222a;
+      border: 2px solid #2d333e;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 18px;
+      font-weight: bold;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid;
+      letter-spacing: 2px;
+    }
+
+    .section-departures .section-title {
+      color: #ffb400;
+      border-color: #ffb400;
+    }
+
+    .section-arrivals .section-title {
+      color: #00d8ff;
+      border-color: #00d8ff;
+    }
+
+    .flight-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .flight-table th {
+      padding: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #888;
+      border-bottom: 1px solid #333;
+    }
+
+    .section-arrivals .flight-table th {
+      color: #aaa;
+      border-bottom-color: #444;
+    }
+
+    .flight-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #1a1a1a;
+      font-size: 15px;
+      vertical-align: middle;
+    }
+
+    .section-arrivals .flight-table td {
+      border-bottom-color: #2a303c;
+    }
+
+    /* COLORI Dettagli Tabellone */
+    .col-time {
+      color: #ffb400;
+      font-weight: bold;
+      width: 80px;
+    }
+
+    .col-flight {
+      color: #00d8ff;
+      font-weight: bold;
+      width: 110px;
+    }
+
+    .col-city {
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .col-gate {
+      color: #ffffff;
+      font-weight: bold;
+      text-align: center;
+      width: 90px;
+    }
+
+    /* LOGHI COMPAGNIE AEREE */
+    .airline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #ddd;
+    }
+
+    .airline-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 11px;
+      color: #fff;
+    }
+
+    /* Colori Brand Compagnie per Firenze */
+    .logo-az { background: #004b23; border: 1px solid #00ff66; } /* ITA Airways */
+    .logo-af { background: #002157; border: 1px solid #ed1c24; } /* Air France */
+    .logo-kl { background: #00a1de; }                            /* KLM */
+    .logo-en { background: #0a2540; border: 1px solid #00d8ff; } /* Air Dolomiti / Lufthansa */
+    .logo-vy { background: #ffcc00; color: #000; }               /* Vueling */
