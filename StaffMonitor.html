@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aeroporto di Firenze (FLR) - Tabellone Live Ufficiale</title>
+  <title>Aeroporto di Firenze (FLR) - Tabellone Voli Live</title>
   <style>
     * {
       box-sizing: border-box;
@@ -13,27 +13,360 @@
     }
 
     body {
-      background-color: #0a0c10;
+      background-color: #080a0e;
       color: #ffffff;
-      padding: 10px;
+      padding: 15px;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 20px;
       min-height: 100vh;
     }
 
-    /* INTESTAZIONE */
+    /* TESTATA */
     .header {
-      background: #12161f;
-      padding: 12px 20px;
-      border-radius: 4px;
+      background: #121620;
+      padding: 15px 20px;
+      border-radius: 6px;
       border-left: 6px solid #ffb400;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
     }
 
     .header-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffb400;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #00ff66;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00ff66;
+    }
+
+    .clock {
+      font-size: 26px;
+      color: #00ff66;
+      font-weight: bold;
+    }
+
+    /* SEZIONE PARTE ALTA: PARTENZE (SFONDO NERO) */
+    .section-departures {
+      background-color: #000000;
+      border: 2px solid #ffb400;
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+    }
+
+    /* SEZIONE PARTE BASSA: ARRIVI (SFONDO GRIGIO SCURO) */
+    .section-arrivals {
+      background-color: #1e2430;
+      border: 2px solid #00d8ff;
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .section-header {
+      font-size: 18px;
+      font-weight: bold;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid;
+      display: flex;
+      justify-content: space-between;
+      letter-spacing: 2px;
+    }
+
+    .section-departures .section-header {
+      color: #ffb400;
+      border-color: #ffb400;
+    }
+
+    .section-arrivals .section-header {
+      color: #00d8ff;
+      border-color: #00d8ff;
+    }
+
+    /* TABELLE */
+    .flight-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .flight-table th {
+      padding: 10px;
+      font-size: 11px;
+      color: #888888;
+      text-transform: uppercase;
+      border-bottom: 1px solid #333333;
+    }
+
+    .section-arrivals .flight-table th {
+      color: #aaaaaa;
+      border-bottom-color: #384252;
+    }
+
+    .flight-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #1a1a1a;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    .section-arrivals .flight-table td {
+      border-bottom-color: #2b3342;
+    }
+
+    /* COLONNE E COLORI */
+    .col-time { color: #ffb400; font-weight: bold; width: 80px; }
+    .col-flight { color: #00d8ff; font-weight: bold; width: 100px; }
+    .col-dest { color: #ffffff; font-weight: bold; font-size: 15px; }
+    .col-gate { color: #ffffff; font-weight: bold; text-align: center; width: 80px; }
+
+    /* LOGHI COMPAGNIE */
+    .airline-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .airline-logo-img {
+      height: 22px;
+      max-width: 85px;
+      object-fit: contain;
+      background: #ffffff;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+
+    /* BADGE STATO */
+    .status {
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+
+    .st-boarding  { background: #3d2f00; color: #ffb400; border: 1px solid #ffb400; }
+    .st-ontime    { background: #003816; color: #00ff66; border: 1px solid #00ff66; }
+    .st-delayed   { background: #421200; color: #ff5722; border: 1px solid #ff5722; }
+    .st-landed    { background: #002b42; color: #00b0ff; border: 1px solid #00b0ff; }
+    .st-cancelled { background: #380000; color: #ff1744; border: 1px solid #ff1744; }
+
+    .msg-box {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- INTESTAZIONE -->
+  <div class="header">
+    <div class="header-title">
+      <span class="live-dot"></span>
+      AEROPORTO DI FIRENZE - PERETOLA (FLR / LIRQ)
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <!-- PARTE ALTA: PARTENZE (NERO) -->
+  <div class="section-departures">
+    <div class="section-header">
+      <span>🛫 PARTENZE / DEPARTURES</span>
+      <span style="font-size: 12px; color: #ffb400;">LIVE FEED</span>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Ora</th>
+          <th>Volo</th>
+          <th>Compagnia</th>
+          <th>Destinazione</th>
+          <th style="text-align:center;">Gate</th>
+          <th>Stato</th>
+        </tr>
+      </thead>
+      <tbody id="departures-rows">
+        <tr><td colspan="6" class="msg-box">In attesa della chiave API o del caricamento dati...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PARTE BASSA: ARRIVI (GRIGIO) -->
+  <div class="section-arrivals">
+    <div class="section-header">
+      <span>🛬 ARRIVI / ARRIVALS</span>
+      <span style="font-size: 12px; color: #00d8ff;">LIVE FEED</span>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Ora</th>
+          <th>Volo</th>
+          <th>Compagnia</th>
+          <th>Provenienza</th>
+          <th style="text-align:center;">Nastro</th>
+          <th>Stato</th>
+        </tr>
+      </thead>
+      <tbody id="arrivals-rows">
+        <tr><td colspan="6" class="msg-box">In attesa della chiave API o del caricamento dati...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURAZIONE API: Inserisci la tua chiave gratuita di RapidAPI (AeroDataBox)
+    // =========================================================================
+    const RAPIDAPI_KEY = "INSERISCI_QUI_LA_TUA_CHIAVE_RAPIDAPI";
+    const IATA_CODE = "FLR";
+
+    // Mappa immagini loghi PNG/SVG trasparenti delle compagnie operanti a Firenze
+    const logoMap = {
+      "ITA Airways": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ITA_Airways_logo.svg/320px-ITA_Airways_logo.svg.png",
+      "Air France": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Air_France_logo.svg/320px-Air_France_logo.svg.png",
+      "KLM": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/KLM_logo.svg/320px-KLM_logo.svg.png",
+      "Vueling": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png",
+      "Air Dolomiti": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Air_Dolomiti_logo.svg/320px-Air_Dolomiti_logo.svg.png",
+      "Lufthansa": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Lufthansa_Logo_2018.svg/320px-Lufthansa_Logo_2018.svg.png",
+      "SWISS": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Swiss_International_Air_Lines_Logo.svg/320px-Swiss_International_Air_Lines_Logo.svg.png",
+      "British Airways": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/British_Airways_logo.svg/320px-British_Airways_logo.svg.png",
+      "Volotea": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Volotea_logo.svg/320px-Volotea_logo.svg.png",
+      "Austrian Airlines": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Austrian_Airlines_logo.svg/320px-Austrian_Airlines_logo.svg.png"
+    };
+
+    // Genera la finestra temporale di 12 ore richiesta dall'API
+    function getTimeRange() {
+      const now = new Date();
+      const future = new Date(now.getTime() + (12 * 60 * 60 * 1000));
+      
+      const format = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
+      return { from: format(now), to: format(future) };
+    }
+
+    // Parsing e formattazione dello stato volo
+    function parseStatus(status) {
+      if (!status) return { class: "st-ontime", text: "IN ORARIO" };
+      const s = status.toLowerCase();
+      if (s.includes("boarding") || s.includes("imbarco")) return { class: "st-boarding", text: "IMBARCO" };
+      if (s.includes("cancel")) return { class: "st-cancelled", text: "CANCELLATO" };
+      if (s.includes("delay") || s.includes("late")) return { class: "st-delayed", text: "RITARDO" };
+      if (s.includes("landed") || s.includes("arrived")) return { class: "st-landed", text: "ATTERRATO" };
+      return { class: "st-ontime", text: "IN ORARIO" };
+    }
+
+    // Chiamata API Live per Firenze FLR
+    async function loadLiveFLRData() {
+      if (!RAPIDAPI_KEY || RAPIDAPI_KEY === "INSERISCI_QUI_LA_TUA_CHIAVE_RAPIDAPI") {
+        console.warn("Inserisci la tua chiave RapidAPI nella variabile RAPIDAPI_KEY per caricare i dati reali.");
+        return;
+      }
+
+      const { from, to } = getTimeRange();
+      const endpoint = `https://aerodatabox.p.rapidapi.com/flights/airports/iata/${IATA_CODE}/${from}/${to}?direction=Both&withLeg=true&withCancelled=true&withCodeshares=false&withCargo=false&withPrivate=false`;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'x-rapidapi-key': RAPIDAPI_KEY,
+            'x-rapidapi-host': 'aerodatabox.p.rapidapi.com'
+          }
+        });
+
+        if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
+
+        const data = await response.json();
+        
+        if (data.departures) renderTable('departures-rows', data.departures, true);
+        if (data.arrivals) renderTable('arrivals-rows', data.arrivals, false);
+
+      } catch (error) {
+        console.error("Errore durante il recupero dei dati volo:", error);
+      }
+    }
+
+    // Render righe nella tabella
+    function renderTable(containerId, flights, isDeparture) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      if (flights.length === 0) {
+        container.innerHTML = `<tr><td colspan="6" class="msg-box">Nessun volo programmato nelle prossime ore.</td></tr>`;
+        return;
+      }
+
+      container.innerHTML = flights.map(f => {
+        const flightNum = f.number || "-";
+        const airlineName = f.airline?.name || "Compagnia";
+        const location = isDeparture 
+          ? (f.movement?.airport?.name || "Destinazione")
+          : (f.movement?.airport?.name || "Provenienza");
+        
+        const rawTime = f.movement?.scheduledTimeLocal || f.movement?.scheduledTimeUtc;
+        const timeStr = rawTime ? rawTime.substring(11, 16) : "--:--";
+        const gateOrBelt = isDeparture ? (f.movement?.gate || "-") : (f.movement?.baggageBelt || "-");
+        
+        const statusInfo = parseStatus(f.status);
+        const logoUrl = logoMap[airlineName] || "";
+
+        return `
+          <tr>
+            <td class="col-time">${timeStr}</td>
+            <td class="col-flight">${flightNum}</td>
+            <td>
+              <div class="airline-cell">
+                ${logoUrl ? `<img src="${logoUrl}" class="airline-logo-img" alt="${airlineName}">` : ''}
+                <span>${airlineName}</span>
+              </div>
+            </td>
+            <td class="col-dest">${location.toUpperCase()}</td>
+            <td class="col-gate">${gateOrBelt}</td>
+            <td><span class="status ${statusInfo.class}">${statusInfo.text}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Orologio
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString('it-IT');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Avvio e refresh automatico ogni 5 minuti (300.000 ms)
+    loadLiveFLRData();
+    setInterval(loadLiveFLRData, 300000);
+  </script>
+</body>
+</html>
       font-size: 20px;
       font-weight: bold;
       color: #ffb400;
