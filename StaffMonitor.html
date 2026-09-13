@@ -3,354 +3,597 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aeroporto di Firenze (FLR) - Tabellone voli</title>
+  <title>staffmonitor.aeroporto.firenze.it</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Consolas', 'Courier New', monospace, sans-serif;
+      font-family: 'Arial Narrow', Arial, sans-serif;
     }
 
     body {
-      background-color: #080a0e;
-      color: #ffffff;
-      padding: 15px;
+      background-color: #ffffff;
+      color: #000000;
+      padding: 5px;
+      font-size: 11px;
+    }
+
+    /* FILTRI RADIO IN ALTO */
+    .filter-bar {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 20px;
-      min-height: 100vh;
+      padding: 6px 10px;
+      background-color: #ffffff;
+      font-size: 11px;
+      color: #333333;
+      border-bottom: 1px solid #cccccc;
+      margin-bottom: 5px;
     }
 
-    /* TESTATA */
-    .header {
-      background: #121620;
-      padding: 15px 20px;
-      border-radius: 6px;
-      border-left: 6px solid #ffb400;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    }
-
-    .header-title {
-      font-size: 20px;
-      font-weight: bold;
-      color: #ffb400;
-      letter-spacing: 2px;
+    .filter-bar label {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 5px;
+      cursor: pointer;
     }
 
-    .live-dot {
-      width: 10px;
-      height: 10px;
-      background: #00ff66;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #00ff66;
+    .filter-bar input[type="radio"] {
+      accent-color: #0066cc;
     }
 
-    .clock {
-      font-size: 26px;
-      color: #00ff66;
-      font-weight: bold;
+    /* CONTENITORE TABELLE CON SCROLL ORIZZONTALE PER MOBILE */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 10px;
     }
 
-    /* SEZIONE PARTENZE (SFONDO NERO) */
-    .section-departures {
-      background-color: #000000;
-      border: 2px solid #ffb400;
-      border-radius: 6px;
-      padding: 15px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
-    }
-
-    /* SEZIONE ARRIVI (SFONDO GRIGIO SCURO) */
-    .section-arrivals {
-      background-color: #1e2430;
-      border: 2px solid #00d8ff;
-      border-radius: 6px;
-      padding: 15px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-    }
-
-    .section-header {
-      font-size: 18px;
-      font-weight: bold;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-      border-bottom: 2px solid;
-      display: flex;
-      justify-content: space-between;
-      letter-spacing: 2px;
-    }
-
-    .section-departures .section-header {
-      color: #ffb400;
-      border-color: #ffb400;
-    }
-
-    .section-arrivals .section-header {
-      color: #00d8ff;
-      border-color: #00d8ff;
-    }
-
-    /* TABELLE */
-    .flight-table {
+    table {
       width: 100%;
       border-collapse: collapse;
-      text-align: left;
+      white-space: nowrap;
     }
 
-    .flight-table th {
-      padding: 10px;
-      font-size: 11px;
-      color: #888888;
-      text-transform: uppercase;
-      border-bottom: 1px solid #333333;
+    /* BARRA BLU DI INTESTAZIONE (DEPARTURES / ARRIVALS) */
+    .header-blue {
+      background-color: #0b3370;
+      color: #ffffff;
     }
 
-    .section-arrivals .flight-table th {
-      color: #aaaaaa;
-      border-bottom-color: #384252;
-    }
-
-    .flight-table td {
-      padding: 12px 10px;
-      border-bottom: 1px solid #1a1a1a;
-      font-size: 14px;
-      vertical-align: middle;
-    }
-
-    .section-arrivals .flight-table td {
-      border-bottom-color: #2b3342;
-    }
-
-    /* COLONNE E COLORI */
-    .col-time { color: #ffb400; font-weight: bold; width: 80px; }
-    .col-flight { color: #00d8ff; font-weight: bold; width: 100px; }
-    .col-dest { color: #ffffff; font-weight: bold; font-size: 15px; }
-    .col-gate { color: #ffffff; font-weight: bold; text-align: center; width: 80px; }
-
-    /* LOGHI COMPAGNIE */
-    .airline-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .airline-logo-img {
-      height: 22px;
-      max-width: 85px;
-      object-fit: contain;
-      background: #ffffff;
-      padding: 2px 5px;
-      border-radius: 3px;
-    }
-
-    /* BADGE STATO */
-    .status {
-      padding: 4px 8px;
-      border-radius: 3px;
-      font-size: 11px;
+    .header-blue th {
+      padding: 4px 5px;
+      font-size: 10px;
       font-weight: bold;
       text-transform: uppercase;
-      display: inline-block;
+      text-align: left;
+      border-right: 1px solid #1a4380;
     }
 
-    .st-boarding  { background: #3d2f00; color: #ffb400; border: 1px solid #ffb400; }
-    .st-ontime    { background: #003816; color: #00ff66; border: 1px solid #00ff66; }
-    .st-delayed   { background: #421200; color: #ff5722; border: 1px solid #ff5722; }
-    .st-landed    { background: #002b42; color: #00b0ff; border: 1px solid #00b0ff; }
-    .st-departed  { background: #1f2533; color: #9fa8da; border: 1px solid #7986cb; }
-    .st-cancelled { background: #380000; color: #ff1744; border: 1px solid #ff1744; }
+    .header-blue th.title-cell {
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    /* STILI PARTE PARTENZE (SFONDO NERO) */
+    .table-departures {
+      background-color: #000000;
+      color: #ffffff;
+    }
+
+    .table-departures tr.data-row {
+      border-bottom: 1px solid #222222;
+      height: 38px;
+    }
+
+    .table-departures td {
+      padding: 3px 5px;
+      vertical-align: middle;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* STILI PARTE ARRIVI (SFONDO GRIGIO SCURO E TESTO GIALLO) */
+    .table-arrivals {
+      background-color: #3f4347;
+      color: #ffee00;
+    }
+
+    .table-arrivals tr.data-row {
+      border-bottom: 1px solid #52575c;
+      height: 38px;
+    }
+
+    .table-arrivals td {
+      padding: 3px 5px;
+      vertical-align: middle;
+      font-size: 11px;
+      font-weight: bold;
+      color: #ffee00;
+    }
+
+    /* LOGHI COMPAGNIE */
+    .logo-cell {
+      width: 80px;
+      text-align: center;
+      background-color: #ffffff;
+      padding: 2px !important;
+    }
+
+    .logo-img {
+      max-width: 75px;
+      max-height: 24px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Dettagli testo specifiche colonne */
+    .col-flight { width: 70px; }
+    .col-actype { width: 45px; }
+    .col-trtype { width: 45px; color: #cccccc; }
+    .col-reg { width: 55px; color: #ffffff; }
+    .table-arrivals .col-reg { color: #ffee00; }
+    .col-city { font-size: 11px; font-weight: bold; width: 140px; }
+
+    /* BOX ORARI (SCHED / EXP) */
+    .box-time {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: bold;
+      text-align: center;
+      min-width: 38px;
+    }
+
+    .box-sched {
+      background-color: #2b2b2b;
+      color: #ffcc00;
+    }
+
+    .box-exp {
+      background-color: #2b2b2b;
+      color: #ffffff;
+    }
+
+    .table-arrivals .box-exp {
+      color: #ffffff;
+    }
+
+    /* RIGA NOTA OPERATORE SOTTO IL VOLO */
+    .sub-note-row td {
+      padding: 0px 5px 4px 85px !important;
+      font-size: 9px;
+      color: #aaaaaa;
+      font-weight: normal;
+      background-color: #000000;
+      border-bottom: 1px solid #222222;
+    }
   </style>
 </head>
 <body>
 
-  <!-- INTESTAZIONE -->
-  <div class="header">
-    <div class="header-title">
-      <span class="live-dot"></span>
-      AEROPORTO DI FIRENZE - PERETOLA (FLR / LIRQ)
-    </div>
-    <div class="clock" id="clock">--:--:--</div>
+  <!-- BARRA FILTRI SUPERIORE -->
+  <div class="filter-bar">
+    <label><input type="radio" name="view" value="all"> Aviazione Commerciale e Generale</label>
+    <label><input type="radio" name="view" value="comm" checked> Aviazione Commerciale</label>
+    <label><input type="radio" name="view" value="gen"> Aviazione Generale</label>
   </div>
 
-  <!-- PARTE ALTA: PARTENZE (NERO) -->
-  <div class="section-departures">
-    <div class="section-header">
-      <span>🛫 PARTENZE / DEPARTURES</span>
-      <span style="font-size: 12px; color: #ffb400;">SISTEMA OPERATIVO FLR</span>
-    </div>
-    <table class="flight-table">
+  <!-- TABELLA PARTENZE (DEPARTURES) -->
+  <div class="table-container">
+    <table class="table-departures">
       <thead>
-        <tr>
-          <th>Ora</th>
-          <th>Volo</th>
-          <th>Compagnia</th>
-          <th>Destinazione</th>
-          <th style="text-align:center;">Gate</th>
-          <th>Stato</th>
+        <tr class="header-blue">
+          <th class="title-cell" style="width: 80px;">DEPARTURES</th>
+          <th>VOLO / FLIGHT</th>
+          <th>AC TYPE</th>
+          <th>TR.TYPE</th>
+          <th>REG</th>
+          <th>DEST / TO</th>
+          <th>SLOT</th>
+          <th>SCHED</th>
+          <th>EXP</th>
+          <th>BLKOFF</th>
+          <th>TKOFF</th>
+          <th>STATUS</th>
+          <th>STAND</th>
+          <th>CHECKIN</th>
+          <th>GATE</th>
+          <th>NOTA OPERATORE</th>
         </tr>
       </thead>
-      <tbody id="departures-rows"></tbody>
+      <tbody>
+        <!-- KLM -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/KLM_logo.svg/320px-KLM_logo.svg.png" class="logo-img" alt="KLM"></td>
+          <td class="col-flight">KL01684</td>
+          <td class="col-actype">E295</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">PHNXV</td>
+          <td class="col-city">AMSTERDAM</td>
+          <td></td>
+          <td><span class="box-time box-sched">15:25</span></td>
+          <td><span class="box-time box-exp">15:57</span></td>
+          <td></td>
+          <td></td>
+          <td>IMBARCATO</td>
+          <td>107</td>
+          <td></td>
+          <td>3</td>
+          <td></td>
+        </tr>
+
+        <!-- ITA AIRWAYS -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ITA_Airways_logo.svg/320px-ITA_Airways_logo.svg.png" class="logo-img" alt="ITA"></td>
+          <td class="col-flight">AZ01682</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">EIHMW</td>
+          <td class="col-city">ROMA FIUMICINO</td>
+          <td></td>
+          <td><span class="box-time box-sched">15:30</span></td>
+          <td><span class="box-time box-exp">15:52</span></td>
+          <td>15:52</td>
+          <td>16:03</td>
+          <td>PARTITO</td>
+          <td>105</td>
+          <td></td>
+          <td>6</td>
+          <td></td>
+        </tr>
+
+        <!-- BRITISH AIRWAYS -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/British_Airways_logo.svg/320px-British_Airways_logo.svg.png" class="logo-img" alt="BA"></td>
+          <td class="col-flight">BA07016</td>
+          <td class="col-actype">E190</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">GLCYT</td>
+          <td class="col-city">LONDON STANSTED</td>
+          <td></td>
+          <td><span class="box-time box-sched">16:15</span></td>
+          <td><span class="box-time box-exp">16:15</span></td>
+          <td></td>
+          <td></td>
+          <td>IMBARCATO</td>
+          <td>102</td>
+          <td></td>
+          <td>11</td>
+          <td></td>
+        </tr>
+
+        <!-- VUELING -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png" class="logo-img" alt="VY"></td>
+          <td class="col-flight">VY06004</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECMIR</td>
+          <td class="col-city">BARCELONA</td>
+          <td></td>
+          <td><span class="box-time box-sched">17:10</span></td>
+          <td><span class="box-time box-exp">17:10</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>103</td>
+          <td></td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- AIR DOLOMITI -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Air_Dolomiti_logo.svg/320px-Air_Dolomiti_logo.svg.png" class="logo-img" alt="EN"></td>
+          <td class="col-flight">EN08197</td>
+          <td class="col-actype">E195</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">IADJK</td>
+          <td class="col-city">MUNICH</td>
+          <td></td>
+          <td><span class="box-time box-sched">17:15</span></td>
+          <td><span class="box-time box-exp">17:35</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>105</td>
+          <td></td>
+          <td>7</td>
+          <td></td>
+        </tr>
+        <tr class="sub-note-row">
+          <td colspan="16">AUTO ETD 15:35 SET BY PRD HUBSTAR</td>
+        </tr>
+
+        <!-- SAS -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/SAS_logo_1998.svg/320px-SAS_logo_1998.svg.png" class="logo-img" alt="SK"></td>
+          <td class="col-flight">SK01916</td>
+          <td class="col-actype">A20N</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">LNRGN</td>
+          <td class="col-city">STOCKHOLM ARLANDA</td>
+          <td></td>
+          <td><span class="box-time box-sched">17:20</span></td>
+          <td><span class="box-time box-exp">17:20</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>106</td>
+          <td></td>
+          <td>4</td>
+          <td></td>
+        </tr>
+
+        <!-- VOLOTEA -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Volotea_logo.svg/320px-Volotea_logo.svg.png" class="logo-img" alt="V7"></td>
+          <td class="col-flight">V703557</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECNDG</td>
+          <td class="col-city">BILBAO</td>
+          <td></td>
+          <td><span class="box-time box-sched">17:40</span></td>
+          <td><span class="box-time box-exp">17:40</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>108</td>
+          <td></td>
+          <td>5</td>
+          <td></td>
+        </tr>
+
+        <!-- AIR FRANCE -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Air_France_logo.svg/320px-Air_France_logo.svg.png" class="logo-img" alt="AF"></td>
+          <td class="col-flight">AF01667</td>
+          <td class="col-actype">BCS3</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">FHZUR</td>
+          <td class="col-city">PARIS C. DE GAULLE</td>
+          <td></td>
+          <td><span class="box-time box-sched">18:10</span></td>
+          <td><span class="box-time box-exp">18:10</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>104</td>
+          <td></td>
+          <td>3</td>
+          <td></td>
+        </tr>
+      </tbody>
     </table>
   </div>
 
-  <!-- PARTE BASSA: ARRIVI (GRIGIO) -->
-  <div class="section-arrivals">
-    <div class="section-header">
-      <span>🛬 ARRIVI / ARRIVALS</span>
-      <span style="font-size: 12px; color: #00d8ff;">SISTEMA OPERATIVO FLR</span>
-    </div>
-    <table class="flight-table">
+  <!-- TABELLA ARRIVI (ARRIVALS) -->
+  <div class="table-container">
+    <table class="table-arrivals">
       <thead>
-        <tr>
-          <th>Ora</th>
-          <th>Volo</th>
-          <th>Compagnia</th>
-          <th>Provenienza</th>
-          <th style="text-align:center;">Nastro</th>
-          <th>Stato</th>
+        <tr class="header-blue">
+          <th class="title-cell" style="width: 80px;">ARRIVALS</th>
+          <th>VOLO / FLIGHT</th>
+          <th>AC TYPE</th>
+          <th>TR.TYPE</th>
+          <th>REG</th>
+          <th>DA / FROM</th>
+          <th>SCHED</th>
+          <th>EXP</th>
+          <th>LAND</th>
+          <th>BLKON</th>
+          <th>STATUS</th>
+          <th>STAND</th>
+          <th>NASTRO / BELT</th>
+          <th>NOTA OPERATORE</th>
         </tr>
       </thead>
-      <tbody id="arrivals-rows"></tbody>
+      <tbody>
+        <!-- SAS -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/SAS_logo_1998.svg/320px-SAS_logo_1998.svg.png" class="logo-img" alt="SK"></td>
+          <td class="col-flight">SK01915</td>
+          <td class="col-actype">A20N</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">LNRGN</td>
+          <td class="col-city">STOCKHOLM ARLANDA</td>
+          <td><span class="box-time box-sched">16:30</span></td>
+          <td><span class="box-time box-exp">16:05</span></td>
+          <td></td>
+          <td></td>
+          <td>ATTERRATO 16:06</td>
+          <td>106</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- VUELING -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png" class="logo-img" alt="VY"></td>
+          <td class="col-flight">VY06003</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECMIR</td>
+          <td class="col-city">BARCELONA</td>
+          <td><span class="box-time box-sched">16:35</span></td>
+          <td><span class="box-time box-exp">16:25</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>103</td>
+          <td>3</td>
+          <td></td>
+        </tr>
+
+        <!-- AIR DOLOMITI -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Air_Dolomiti_logo.svg/320px-Air_Dolomiti_logo.svg.png" class="logo-img" alt="EN"></td>
+          <td class="col-flight">EN08196</td>
+          <td class="col-actype">E195</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">IADJK</td>
+          <td class="col-city">MUNICH</td>
+          <td><span class="box-time box-sched">16:35</span></td>
+          <td><span class="box-time box-exp">17:10</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>105</td>
+          <td>3</td>
+          <td></td>
+        </tr>
+
+        <!-- KLM -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/KLM_logo.svg/320px-KLM_logo.svg.png" class="logo-img" alt="KLM"></td>
+          <td class="col-flight">KL01655</td>
+          <td class="col-actype">E295</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">PHNXM</td>
+          <td class="col-city">AMSTERDAM</td>
+          <td><span class="box-time box-sched">16:50</span></td>
+          <td><span class="box-time box-exp">16:49</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>101</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- VUELING -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png" class="logo-img" alt="VY"></td>
+          <td class="col-flight">VY06815</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECMIQ</td>
+          <td class="col-city">BRUXELLES</td>
+          <td><span class="box-time box-sched">17:05</span></td>
+          <td><span class="box-time box-exp">16:55</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>102</td>
+          <td>2</td>
+          <td></td>
+        </tr>
+
+        <!-- VOLOTEA -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Volotea_logo.svg/320px-Volotea_logo.svg.png" class="logo-img" alt="V7"></td>
+          <td class="col-flight">V701332</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECNDG</td>
+          <td class="col-city">CAGLIARI</td>
+          <td><span class="box-time box-sched">17:10</span></td>
+          <td><span class="box-time box-exp">17:10</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>108</td>
+          <td>2</td>
+          <td></td>
+        </tr>
+
+        <!-- AIR FRANCE -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Air_France_logo.svg/320px-Air_France_logo.svg.png" class="logo-img" alt="AF"></td>
+          <td class="col-flight">AF01666</td>
+          <td class="col-actype">BCS3</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">FHZUR</td>
+          <td class="col-city">PARIS C. DE GAULLE</td>
+          <td><span class="box-time box-sched">17:15</span></td>
+          <td><span class="box-time box-exp">16:59</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>104</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- AEGEAN -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Aegean_Airlines_logo.svg/320px-Aegean_Airlines_logo.svg.png" class="logo-img" alt="A3"></td>
+          <td class="col-flight">A300674</td>
+          <td class="col-actype">A20N</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">SXNEJ</td>
+          <td class="col-city">ATHENS</td>
+          <td><span class="box-time box-sched">17:25</span></td>
+          <td><span class="box-time box-exp">17:33</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>102</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- TAP PORTUGAL -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/TAP_Air_Portugal_logo.svg/320px-TAP_Air_Portugal_logo.svg.png" class="logo-img" alt="TP"></td>
+          <td class="col-flight">TP00876</td>
+          <td class="col-actype">E190</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">CSTPT</td>
+          <td class="col-city">LISBON</td>
+          <td><span class="box-time box-sched">18:00</span></td>
+          <td><span class="box-time box-exp">18:45</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>104</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+
+        <!-- VUELING -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png" class="logo-img" alt="VY"></td>
+          <td class="col-flight">VY01497</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">ECMGF</td>
+          <td class="col-city">MADRID</td>
+          <td><span class="box-time box-sched">18:10</span></td>
+          <td><span class="box-time box-exp">18:10</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>107</td>
+          <td>3</td>
+          <td></td>
+        </tr>
+
+        <!-- ITA AIRWAYS -->
+        <tr class="data-row">
+          <td class="logo-cell"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ITA_Airways_logo.svg/320px-ITA_Airways_logo.svg.png" class="logo-img" alt="ITA"></td>
+          <td class="col-flight">AZ01679</td>
+          <td class="col-actype">A319</td>
+          <td class="col-trtype">Linea</td>
+          <td class="col-reg">EIHMW</td>
+          <td class="col-city">ROMA FIUMICINO</td>
+          <td><span class="box-time box-sched">18:15</span></td>
+          <td><span class="box-time box-exp">18:15</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>101</td>
+          <td>2</td>
+          <td></td>
+        </tr>
+      </tbody>
     </table>
   </div>
 
-  <script>
-    // Mappa loghi vettoriali delle compagnie aeree operanti a Firenze
-    const logoMap = {
-      "ITA Airways": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ITA_Airways_logo.svg/320px-ITA_Airways_logo.svg.png",
-      "Air France": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Air_France_logo.svg/320px-Air_France_logo.svg.png",
-      "KLM": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/KLM_logo.svg/320px-KLM_logo.svg.png",
-      "Vueling": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Vueling_Logo.svg/320px-Vueling_Logo.svg.png",
-      "Air Dolomiti": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Air_Dolomiti_logo.svg/320px-Air_Dolomiti_logo.svg.png",
-      "Lufthansa": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Lufthansa_Logo_2018.svg/320px-Lufthansa_Logo_2018.svg.png",
-      "SWISS": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Swiss_International_Air_Lines_Logo.svg/320px-Swiss_International_Air_Lines_Logo.svg.png",
-      "British Airways": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/British_Airways_logo.svg/320px-British_Airways_logo.svg.png",
-      "Volotea": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Volotea_logo.svg/320px-Volotea_logo.svg.png",
-      "Austrian Airlines": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Austrian_Airlines_logo.svg/320px-Austrian_Airlines_logo.svg.png"
-    };
-
-    // Database dei voli per Firenze Peretola (FLR)
-    const departuresData = [
-      { time: "06:13", flight: "AZ 1676", airline: "ITA Airways", dest: "ROMA (FCO)", gate: "03" },
-      { time: "06:15", flight: "V7 1428", airline: "Volotea", dest: "OLBIA (OLB)", gate: "01" },
-      { time: "06:40", flight: "KL 1650", airline: "KLM", dest: "AMSTERDAM (AMS)", gate: "05" },
-      { time: "06:40", flight: "EN 8861", airline: "Air Dolomiti", dest: "FRANCOFORTE (FRA)", gate: "02" },
-      { time: "06:40", flight: "LX 1683", airline: "SWISS", dest: "ZURIGO (ZRH)", gate: "04" },
-      { time: "06:55", flight: "VY 1494", airline: "Vueling", dest: "MADRID (MAD)", gate: "06" },
-      { time: "07:05", flight: "AF 1267", airline: "Air France", dest: "PARIGI (CDG)", gate: "02" },
-      { time: "07:05", flight: "VY 6204", airline: "Vueling", dest: "LONDRA GATWICK (LGW)", gate: "07" },
-      { time: "07:10", flight: "OS 540", airline: "Austrian Airlines", dest: "VIENNA (VIE)", gate: "01" },
-      { time: "07:20", flight: "BA 523", airline: "British Airways", dest: "LONDRA HEATHROW (LHR)", gate: "05" },
-      { time: "08:25", flight: "EN 8191", airline: "Air Dolomiti", dest: "MONACO (MUC)", gate: "03" },
-      { time: "10:00", flight: "AF 1067", airline: "Air France", dest: "PARIGI (CDG)", gate: "04" },
-      { time: "10:35", flight: "BA 8472", airline: "British Airways", dest: "LONDRA CITY (LCY)", gate: "06" },
-      { time: "12:15", flight: "VY 6002", airline: "Vueling", dest: "BARCELLONA (BCN)", gate: "02" },
-      { time: "14:30", flight: "KL 1652", airline: "KLM", dest: "AMSTERDAM (AMS)", gate: "05" },
-      { time: "17:10", flight: "EN 8853", airline: "Air Dolomiti", dest: "FRANCOFORTE (FRA)", gate: "03" },
-      { time: "19:45", flight: "AZ 1678", airline: "ITA Airways", dest: "ROMA (FCO)", gate: "01" }
-    ];
-
-    const arrivalsData = [
-      { time: "08:20", flight: "VY 6001", airline: "Vueling", origin: "BARCELLONA (BCN)", belt: "01" },
-      { time: "08:40", flight: "V7 1429", airline: "Volotea", origin: "OLBIA (OLB)", belt: "02" },
-      { time: "08:45", flight: "AF 1066", airline: "Air France", origin: "PARIGI (CDG)", belt: "01" },
-      { time: "09:00", flight: "EN 8192", airline: "Air Dolomiti", origin: "MONACO (MUC)", belt: "03" },
-      { time: "09:20", flight: "EN 8852", airline: "Air Dolomiti", origin: "FRANCOFORTE (FRA)", belt: "02" },
-      { time: "09:50", flight: "LX 1678", airline: "SWISS", origin: "ZURIGO (ZRH)", belt: "01" },
-      { time: "10:05", flight: "OS 533", airline: "Austrian Airlines", origin: "VIENNA (VIE)", belt: "02" },
-      { time: "10:25", flight: "AZ 1675", airline: "ITA Airways", origin: "ROMA (FCO)", belt: "03" },
-      { time: "10:30", flight: "KL 1651", airline: "KLM", origin: "AMSTERDAM (AMS)", belt: "01" },
-      { time: "11:08", flight: "BA 520", airline: "British Airways", origin: "LONDRA HEATHROW (LHR)", belt: "02" },
-      { time: "15:40", flight: "AF 1266", airline: "Air France", origin: "PARIGI (CDG)", belt: "01" },
-      { time: "18:30", flight: "EN 8854", airline: "Air Dolomiti", origin: "FRANCOFORTE (FRA)", belt: "03" },
-      { time: "21:10", flight: "AZ 1677", airline: "ITA Airways", origin: "ROMA (FCO)", belt: "02" }
-    ];
-
-    // Calcolo dinamico dello stato in base all'ora corrente del computer
-    function getDynamicStatus(flightTimeStr, isDeparture) {
-      const now = new Date();
-      const [hours, minutes] = flightTimeStr.split(':').map(Number);
-      const flightDate = new Date();
-      flightDate.setHours(hours, minutes, 0, 0);
-
-      const diffMinutes = Math.floor((flightDate - now) / 60000);
-
-      if (isDeparture) {
-        if (diffMinutes > 40) return { class: "st-ontime", text: "IN ORARIO" };
-        if (diffMinutes > 10) return { class: "st-boarding", text: "IMBARCO" };
-        if (diffMinutes >= -15) return { class: "st-boarding", text: "ULTIMO CHIAMATA" };
-        return { class: "st-departed", text: "DECOLLATO" };
-      } else {
-        if (diffMinutes > 20) return { class: "st-ontime", text: "IN ORARIO" };
-        if (diffMinutes >= -30) return { class: "st-landed", text: "ATTERRATO" };
-        return { class: "st-landed", text: "CONSEGNATO" };
-      }
-    }
-
-    // Rendering tabelle
-    function renderBoard() {
-      const depContainer = document.getElementById('departures-rows');
-      const arrContainer = document.getElementById('arrivals-rows');
-
-      depContainer.innerHTML = departuresData.map(f => {
-        const logo = logoMap[f.airline] || "";
-        const st = getDynamicStatus(f.time, true);
-        return `
-          <tr>
-            <td class="col-time">${f.time}</td>
-            <td class="col-flight">${f.flight}</td>
-            <td>
-              <div class="airline-cell">
-                ${logo ? `<img src="${logo}" class="airline-logo-img" alt="${f.airline}">` : ''}
-                <span>${f.airline}</span>
-              </div>
-            </td>
-            <td class="col-dest">${f.dest}</td>
-            <td class="col-gate">${f.gate}</td>
-            <td><span class="status ${st.class}">${st.text}</span></td>
-          </tr>
-        `;
-      }).join('');
-
-      arrContainer.innerHTML = arrivalsData.map(f => {
-        const logo = logoMap[f.airline] || "";
-        const st = getDynamicStatus(f.time, false);
-        return `
-          <tr>
-            <td class="col-time">${f.time}</td>
-            <td class="col-flight">${f.flight}</td>
-            <td>
-              <div class="airline-cell">
-                ${logo ? `<img src="${logo}" class="airline-logo-img" alt="${f.airline}">` : ''}
-                <span>${f.airline}</span>
-              </div>
-            </td>
-            <td class="col-dest">${f.origin}</td>
-            <td class="col-gate">${f.belt}</td>
-            <td><span class="status ${st.class}">${st.text}</span></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Orologio
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('clock').textContent = now.toLocaleTimeString('it-IT');
-    }
-
-    setInterval(updateClock, 1000);
-    setInterval(renderBoard, 30000);
-
-    updateClock();
-    renderBoard();
-  </script>
 </body>
 </html>
