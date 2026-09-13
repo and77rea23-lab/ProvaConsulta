@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aeroporto di Firenze (FLR) - Tabellone Voli Live</title>
+  <title>Aeroporto di Firenze (FLR) - Tabellone Voli</title>
   <style>
     * {
       box-sizing: border-box;
@@ -58,7 +58,7 @@
       font-weight: bold;
     }
 
-    /* SEZIONE PARTE ALTA: PARTENZE (SFONDO NERO) */
+    /* SEZIONE PARTENZE (SFONDO NERO) */
     .section-departures {
       background-color: #000000;
       border: 2px solid #ffb400;
@@ -67,7 +67,7 @@
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
     }
 
-    /* SEZIONE PARTE BASSA: ARRIVI (SFONDO GRIGIO SCURO) */
+    /* SEZIONE ARRIVI (SFONDO GRIGIO SCURO) */
     .section-arrivals {
       background-color: #1e2430;
       border: 2px solid #00d8ff;
@@ -164,14 +164,8 @@
     .st-ontime    { background: #003816; color: #00ff66; border: 1px solid #00ff66; }
     .st-delayed   { background: #421200; color: #ff5722; border: 1px solid #ff5722; }
     .st-landed    { background: #002b42; color: #00b0ff; border: 1px solid #00b0ff; }
+    .st-departed  { background: #1f2533; color: #9fa8da; border: 1px solid #7986cb; }
     .st-cancelled { background: #380000; color: #ff1744; border: 1px solid #ff1744; }
-
-    .msg-box {
-      text-align: center;
-      padding: 20px;
-      color: #888;
-      font-style: italic;
-    }
   </style>
 </head>
 <body>
@@ -189,7 +183,7 @@
   <div class="section-departures">
     <div class="section-header">
       <span>🛫 PARTENZE / DEPARTURES</span>
-      <span style="font-size: 12px; color: #ffb400;">LIVE FEED</span>
+      <span style="font-size: 12px; color: #ffb400;">SISTEMA OPERATIVO FLR</span>
     </div>
     <table class="flight-table">
       <thead>
@@ -202,9 +196,7 @@
           <th>Stato</th>
         </tr>
       </thead>
-      <tbody id="departures-rows">
-        <tr><td colspan="6" class="msg-box">In attesa della chiave API o del caricamento dati...</td></tr>
-      </tbody>
+      <tbody id="departures-rows"></tbody>
     </table>
   </div>
 
@@ -212,7 +204,7 @@
   <div class="section-arrivals">
     <div class="section-header">
       <span>🛬 ARRIVI / ARRIVALS</span>
-      <span style="font-size: 12px; color: #00d8ff;">LIVE FEED</span>
+      <span style="font-size: 12px; color: #00d8ff;">SISTEMA OPERATIVO FLR</span>
     </div>
     <table class="flight-table">
       <thead>
@@ -225,20 +217,12 @@
           <th>Stato</th>
         </tr>
       </thead>
-      <tbody id="arrivals-rows">
-        <tr><td colspan="6" class="msg-box">In attesa della chiave API o del caricamento dati...</td></tr>
-      </tbody>
+      <tbody id="arrivals-rows"></tbody>
     </table>
   </div>
 
   <script>
-    // =========================================================================
-    // CONFIGURAZIONE API: Inserisci la tua chiave gratuita di RapidAPI (AeroDataBox)
-    // =========================================================================
-    const RAPIDAPI_KEY = "INSERISCI_QUI_LA_TUA_CHIAVE_RAPIDAPI";
-    const IATA_CODE = "FLR";
-
-    // Mappa immagini loghi PNG/SVG trasparenti delle compagnie operanti a Firenze
+    // Mappa loghi vettoriali delle compagnie aeree operanti a Firenze
     const logoMap = {
       "ITA Airways": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ITA_Airways_logo.svg/320px-ITA_Airways_logo.svg.png",
       "Air France": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Air_France_logo.svg/320px-Air_France_logo.svg.png",
@@ -252,102 +236,105 @@
       "Austrian Airlines": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Austrian_Airlines_logo.svg/320px-Austrian_Airlines_logo.svg.png"
     };
 
-    // Genera la finestra temporale di 12 ore richiesta dall'API
-    function getTimeRange() {
+    // Database dei voli per Firenze Peretola (FLR)
+    const departuresData = [
+      { time: "06:13", flight: "AZ 1676", airline: "ITA Airways", dest: "ROMA (FCO)", gate: "03" },
+      { time: "06:15", flight: "V7 1428", airline: "Volotea", dest: "OLBIA (OLB)", gate: "01" },
+      { time: "06:40", flight: "KL 1650", airline: "KLM", dest: "AMSTERDAM (AMS)", gate: "05" },
+      { time: "06:40", flight: "EN 8861", airline: "Air Dolomiti", dest: "FRANCOFORTE (FRA)", gate: "02" },
+      { time: "06:40", flight: "LX 1683", airline: "SWISS", dest: "ZURIGO (ZRH)", gate: "04" },
+      { time: "06:55", flight: "VY 1494", airline: "Vueling", dest: "MADRID (MAD)", gate: "06" },
+      { time: "07:05", flight: "AF 1267", airline: "Air France", dest: "PARIGI (CDG)", gate: "02" },
+      { time: "07:05", flight: "VY 6204", airline: "Vueling", dest: "LONDRA GATWICK (LGW)", gate: "07" },
+      { time: "07:10", flight: "OS 540", airline: "Austrian Airlines", dest: "VIENNA (VIE)", gate: "01" },
+      { time: "07:20", flight: "BA 523", airline: "British Airways", dest: "LONDRA HEATHROW (LHR)", gate: "05" },
+      { time: "08:25", flight: "EN 8191", airline: "Air Dolomiti", dest: "MONACO (MUC)", gate: "03" },
+      { time: "10:00", flight: "AF 1067", airline: "Air France", dest: "PARIGI (CDG)", gate: "04" },
+      { time: "10:35", flight: "BA 8472", airline: "British Airways", dest: "LONDRA CITY (LCY)", gate: "06" },
+      { time: "12:15", flight: "VY 6002", airline: "Vueling", dest: "BARCELLONA (BCN)", gate: "02" },
+      { time: "14:30", flight: "KL 1652", airline: "KLM", dest: "AMSTERDAM (AMS)", gate: "05" },
+      { time: "17:10", flight: "EN 8853", airline: "Air Dolomiti", dest: "FRANCOFORTE (FRA)", gate: "03" },
+      { time: "19:45", flight: "AZ 1678", airline: "ITA Airways", dest: "ROMA (FCO)", gate: "01" }
+    ];
+
+    const arrivalsData = [
+      { time: "08:20", flight: "VY 6001", airline: "Vueling", origin: "BARCELLONA (BCN)", belt: "01" },
+      { time: "08:40", flight: "V7 1429", airline: "Volotea", origin: "OLBIA (OLB)", belt: "02" },
+      { time: "08:45", flight: "AF 1066", airline: "Air France", origin: "PARIGI (CDG)", belt: "01" },
+      { time: "09:00", flight: "EN 8192", airline: "Air Dolomiti", origin: "MONACO (MUC)", belt: "03" },
+      { time: "09:20", flight: "EN 8852", airline: "Air Dolomiti", origin: "FRANCOFORTE (FRA)", belt: "02" },
+      { time: "09:50", flight: "LX 1678", airline: "SWISS", origin: "ZURIGO (ZRH)", belt: "01" },
+      { time: "10:05", flight: "OS 533", airline: "Austrian Airlines", origin: "VIENNA (VIE)", belt: "02" },
+      { time: "10:25", flight: "AZ 1675", airline: "ITA Airways", origin: "ROMA (FCO)", belt: "03" },
+      { time: "10:30", flight: "KL 1651", airline: "KLM", origin: "AMSTERDAM (AMS)", belt: "01" },
+      { time: "11:08", flight: "BA 520", airline: "British Airways", origin: "LONDRA HEATHROW (LHR)", belt: "02" },
+      { time: "15:40", flight: "AF 1266", airline: "Air France", origin: "PARIGI (CDG)", belt: "01" },
+      { time: "18:30", flight: "EN 8854", airline: "Air Dolomiti", origin: "FRANCOFORTE (FRA)", belt: "03" },
+      { time: "21:10", flight: "AZ 1677", airline: "ITA Airways", origin: "ROMA (FCO)", belt: "02" }
+    ];
+
+    // Calcolo dinamico dello stato in base all'ora corrente del computer
+    function getDynamicStatus(flightTimeStr, isDeparture) {
       const now = new Date();
-      const future = new Date(now.getTime() + (12 * 60 * 60 * 1000));
-      
-      const format = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-      };
+      const [hours, minutes] = flightTimeStr.split(':').map(Number);
+      const flightDate = new Date();
+      flightDate.setHours(hours, minutes, 0, 0);
 
-      return { from: format(now), to: format(future) };
-    }
+      const diffMinutes = Math.floor((flightDate - now) / 60000);
 
-    // Parsing e formattazione dello stato volo
-    function parseStatus(status) {
-      if (!status) return { class: "st-ontime", text: "IN ORARIO" };
-      const s = status.toLowerCase();
-      if (s.includes("boarding") || s.includes("imbarco")) return { class: "st-boarding", text: "IMBARCO" };
-      if (s.includes("cancel")) return { class: "st-cancelled", text: "CANCELLATO" };
-      if (s.includes("delay") || s.includes("late")) return { class: "st-delayed", text: "RITARDO" };
-      if (s.includes("landed") || s.includes("arrived")) return { class: "st-landed", text: "ATTERRATO" };
-      return { class: "st-ontime", text: "IN ORARIO" };
-    }
-
-    // Chiamata API Live per Firenze FLR
-    async function loadLiveFLRData() {
-      if (!RAPIDAPI_KEY || RAPIDAPI_KEY === "INSERISCI_QUI_LA_TUA_CHIAVE_RAPIDAPI") {
-        console.warn("Inserisci la tua chiave RapidAPI nella variabile RAPIDAPI_KEY per caricare i dati reali.");
-        return;
-      }
-
-      const { from, to } = getTimeRange();
-      const endpoint = `https://aerodatabox.p.rapidapi.com/flights/airports/iata/${IATA_CODE}/${from}/${to}?direction=Both&withLeg=true&withCancelled=true&withCodeshares=false&withCargo=false&withPrivate=false`;
-
-      try {
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': 'aerodatabox.p.rapidapi.com'
-          }
-        });
-
-        if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
-
-        const data = await response.json();
-        
-        if (data.departures) renderTable('departures-rows', data.departures, true);
-        if (data.arrivals) renderTable('arrivals-rows', data.arrivals, false);
-
-      } catch (error) {
-        console.error("Errore durante il recupero dei dati volo:", error);
+      if (isDeparture) {
+        if (diffMinutes > 40) return { class: "st-ontime", text: "IN ORARIO" };
+        if (diffMinutes > 10) return { class: "st-boarding", text: "IMBARCO" };
+        if (diffMinutes >= -15) return { class: "st-boarding", text: "ULTIMO CHIAMATA" };
+        return { class: "st-departed", text: "DECOLLATO" };
+      } else {
+        if (diffMinutes > 20) return { class: "st-ontime", text: "IN ORARIO" };
+        if (diffMinutes >= -30) return { class: "st-landed", text: "ATTERRATO" };
+        return { class: "st-landed", text: "CONSEGNATO" };
       }
     }
 
-    // Render righe nella tabella
-    function renderTable(containerId, flights, isDeparture) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
+    // Rendering tabelle
+    function renderBoard() {
+      const depContainer = document.getElementById('departures-rows');
+      const arrContainer = document.getElementById('arrivals-rows');
 
-      if (flights.length === 0) {
-        container.innerHTML = `<tr><td colspan="6" class="msg-box">Nessun volo programmato nelle prossime ore.</td></tr>`;
-        return;
-      }
-
-      container.innerHTML = flights.map(f => {
-        const flightNum = f.number || "-";
-        const airlineName = f.airline?.name || "Compagnia";
-        const location = isDeparture 
-          ? (f.movement?.airport?.name || "Destinazione")
-          : (f.movement?.airport?.name || "Provenienza");
-        
-        const rawTime = f.movement?.scheduledTimeLocal || f.movement?.scheduledTimeUtc;
-        const timeStr = rawTime ? rawTime.substring(11, 16) : "--:--";
-        const gateOrBelt = isDeparture ? (f.movement?.gate || "-") : (f.movement?.baggageBelt || "-");
-        
-        const statusInfo = parseStatus(f.status);
-        const logoUrl = logoMap[airlineName] || "";
-
+      depContainer.innerHTML = departuresData.map(f => {
+        const logo = logoMap[f.airline] || "";
+        const st = getDynamicStatus(f.time, true);
         return `
           <tr>
-            <td class="col-time">${timeStr}</td>
-            <td class="col-flight">${flightNum}</td>
+            <td class="col-time">${f.time}</td>
+            <td class="col-flight">${f.flight}</td>
             <td>
               <div class="airline-cell">
-                ${logoUrl ? `<img src="${logoUrl}" class="airline-logo-img" alt="${airlineName}">` : ''}
-                <span>${airlineName}</span>
+                ${logo ? `<img src="${logo}" class="airline-logo-img" alt="${f.airline}">` : ''}
+                <span>${f.airline}</span>
               </div>
             </td>
-            <td class="col-dest">${location.toUpperCase()}</td>
-            <td class="col-gate">${gateOrBelt}</td>
-            <td><span class="status ${statusInfo.class}">${statusInfo.text}</span></td>
+            <td class="col-dest">${f.dest}</td>
+            <td class="col-gate">${f.gate}</td>
+            <td><span class="status ${st.class}">${st.text}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      arrContainer.innerHTML = arrivalsData.map(f => {
+        const logo = logoMap[f.airline] || "";
+        const st = getDynamicStatus(f.time, false);
+        return `
+          <tr>
+            <td class="col-time">${f.time}</td>
+            <td class="col-flight">${f.flight}</td>
+            <td>
+              <div class="airline-cell">
+                ${logo ? `<img src="${logo}" class="airline-logo-img" alt="${f.airline}">` : ''}
+                <span>${f.airline}</span>
+              </div>
+            </td>
+            <td class="col-dest">${f.origin}</td>
+            <td class="col-gate">${f.belt}</td>
+            <td><span class="status ${st.class}">${st.text}</span></td>
           </tr>
         `;
       }).join('');
@@ -358,12 +345,12 @@
       const now = new Date();
       document.getElementById('clock').textContent = now.toLocaleTimeString('it-IT');
     }
-    setInterval(updateClock, 1000);
-    updateClock();
 
-    // Avvio e refresh automatico ogni 5 minuti (300.000 ms)
-    loadLiveFLRData();
-    setInterval(loadLiveFLRData, 300000);
+    setInterval(updateClock, 1000);
+    setInterval(renderBoard, 30000);
+
+    updateClock();
+    renderBoard();
   </script>
 </body>
 </html>
