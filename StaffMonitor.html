@@ -1,20 +1,19 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aeroporto di Firenze (FLR) - Tabellone Arrivi e Partenze Live</title>
+  <title>Aeroporto di Firenze (FLR) - Tabellone Voli Live</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Consolas', 'Courier New', monospace;
+      font-family: 'Consolas', 'Courier New', monospace, sans-serif;
     }
 
     body {
-      background-color: #050505;
+      background-color: #12151c;
       color: #ffffff;
       padding: 15px;
       display: flex;
@@ -23,18 +22,20 @@
       min-height: 100vh;
     }
 
+    /* INTESTAZIONE AEROPORTO */
     .airport-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #111;
+      background: #1c212d;
       padding: 15px 20px;
       border-radius: 6px;
-      border-left: 5px solid #ffb400;
+      border-left: 6px solid #ffb400;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
     .airport-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       color: #ffb400;
       letter-spacing: 2px;
@@ -46,22 +47,22 @@
       font-weight: bold;
     }
 
-    /* SEZIONE PARTE ALTA: PARTENZE (SFONDO NERO) */
+    /* PARTE ALTA: PARTENZE (SFONDO NERO COMPATTO) */
     .section-departures {
-      background-color: #000000;
-      border: 2px solid #222;
+      background-color: #050505;
+      border: 2px solid #ffb400;
       border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
     }
 
-    /* SEZIONE PARTE BASSA: ARRIVI (SFONDO GRIGIO) */
+    /* PARTE BASSA: ARRIVI (SFONDO GRIGIO SCURO) */
     .section-arrivals {
-      background-color: #1e222a;
-      border: 2px solid #2d333e;
+      background-color: #1e2430;
+      border: 2px solid #00d8ff;
       border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      padding: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     }
 
     .section-title {
@@ -70,7 +71,7 @@
       justify-content: space-between;
       font-size: 18px;
       font-weight: bold;
-      padding-bottom: 12px;
+      padding-bottom: 10px;
       margin-bottom: 15px;
       border-bottom: 2px solid;
       letter-spacing: 2px;
@@ -86,6 +87,7 @@
       border-color: #00d8ff;
     }
 
+    /* TABELLE */
     .flight-table {
       width: 100%;
       border-collapse: collapse;
@@ -102,7 +104,7 @@
 
     .section-arrivals .flight-table th {
       color: #aaa;
-      border-bottom-color: #444;
+      border-bottom-color: #3d4656;
     }
 
     .flight-table td {
@@ -113,10 +115,10 @@
     }
 
     .section-arrivals .flight-table td {
-      border-bottom-color: #2a303c;
+      border-bottom-color: #2b3342;
     }
 
-    /* COLORI Dettagli Tabellone */
+    /* DETTAGLI COLONNE */
     .col-time {
       color: #ffb400;
       font-weight: bold;
@@ -132,7 +134,7 @@
     .col-city {
       color: #ffffff;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 15px;
     }
 
     .col-gate {
@@ -142,18 +144,18 @@
       width: 90px;
     }
 
-    /* LOGHI COMPAGNIE AEREE */
+    /* LOGHI E COMPAGNIE AEREE */
     .airline-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: #ddd;
+      gap: 10px;
+      font-size: 14px;
+      color: #e0e0e0;
     }
 
     .airline-logo {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 4px;
       display: inline-flex;
       align-items: center;
@@ -163,9 +165,220 @@
       color: #fff;
     }
 
-    /* Colori Brand Compagnie per Firenze */
     .logo-az { background: #004b23; border: 1px solid #00ff66; } /* ITA Airways */
     .logo-af { background: #002157; border: 1px solid #ed1c24; } /* Air France */
     .logo-kl { background: #00a1de; }                            /* KLM */
     .logo-en { background: #0a2540; border: 1px solid #00d8ff; } /* Air Dolomiti / Lufthansa */
     .logo-vy { background: #ffcc00; color: #000; }               /* Vueling */
+    .logo-lx { background: #e30613; }                            /* SWISS */
+    .logo-ba { background: #eb192d; }                            /* British Airways */
+    .logo-v7 { background: #ce1126; border: 1px solid #fff; }    /* Volotea */
+
+    /* BADGE STATO VOLO */
+    .status {
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .st-boarding { background: #3d2f00; color: #ffb400; border: 1px solid #ffb400; }
+    .st-ontime   { background: #003816; color: #00ff66; border: 1px solid #00ff66; }
+    .st-delayed  { background: #421200; color: #ff5722; border: 1px solid #ff5722; }
+    .st-landed   { background: #002b42; color: #00b0ff; border: 1px solid #00b0ff; }
+    .st-cancelled{ background: #380000; color: #ff1744; border: 1px solid #ff1744; }
+
+    .pulse-icon {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #00ff66;
+      border-radius: 50%;
+      margin-right: 8px;
+      box-shadow: 0 0 10px #00ff66;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TESTATA AEROPORTO DI FIRENZE -->
+  <div class="airport-header">
+    <div class="airport-title">
+      <span class="pulse-icon"></span>FIRENZE AMERIGO VESPUCCI (FLR / LIRQ)
+    </div>
+    <div class="live-clock" id="clock">--:--:--</div>
+  </div>
+
+  <!-- SEZIONE PARTE ALTA: PARTENZE (NERA) -->
+  <div class="section-departures">
+    <div class="section-title">
+      <span>🛫 PARTENZE / DEPARTURES</span>
+      <span style="font-size:12px; color:#ffb400;">LIVE BOARD</span>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Ora</th>
+          <th>Volo</th>
+          <th>Compagnia</th>
+          <th>Destinazione</th>
+          <th style="text-align:center;">Gate</th>
+          <th>Stato</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="col-time">06:25</td>
+          <td class="col-flight">AZ 1676</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-az">AZ</span>ITA Airways</div></td>
+          <td class="col-city">ROMA (FCO)</td>
+          <td class="col-gate">G01</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">06:30</td>
+          <td class="col-flight">KL 1650</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-kl">KL</span>KLM</div></td>
+          <td class="col-city">AMSTERDAM (AMS)</td>
+          <td class="col-gate">G04</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">06:30</td>
+          <td class="col-flight">EN 8861</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-en">EN</span>Air Dolomiti</div></td>
+          <td class="col-city">FRANCOFORTE (FRA)</td>
+          <td class="col-gate">G07</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">06:45</td>
+          <td class="col-flight">VY 1494</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-vy">VY</span>Vueling</div></td>
+          <td class="col-city">MADRID (MAD)</td>
+          <td class="col-gate">G05</td>
+          <td><span class="status st-boarding">IMBARCO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">06:55</td>
+          <td class="col-flight">AF 1267</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-af">AF</span>Air France</div></td>
+          <td class="col-city">PARIGI (CDG)</td>
+          <td class="col-gate">G02</td>
+          <td><span class="status st-boarding">IMBARCO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">08:25</td>
+          <td class="col-flight">EN 8191</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-en">LH</span>Lufthansa</div></td>
+          <td class="col-city">MONACO (MUC)</td>
+          <td class="col-gate">G03</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">10:35</td>
+          <td class="col-flight">BA 8472</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-ba">BA</span>British Airways</div></td>
+          <td class="col-city">LONDRA CITY (LCY)</td>
+          <td class="col-gate">G08</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SEZIONE PARTE BASSA: ARRIVI (GRIGIO SCURO) -->
+  <div class="section-arrivals">
+    <div class="section-title">
+      <span>🛬 ARRIVI / ARRIVALS</span>
+      <span style="font-size:12px; color:#00d8ff;">LIVE BOARD</span>
+    </div>
+    <table class="flight-table">
+      <thead>
+        <tr>
+          <th>Ora</th>
+          <th>Volo</th>
+          <th>Compagnia</th>
+          <th>Provenienza</th>
+          <th style="text-align:center;">Nastro</th>
+          <th>Stato</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="col-time">08:20</td>
+          <td class="col-flight">VY 6001</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-vy">VY</span>Vueling</div></td>
+          <td class="col-city">BARCELLONA (BCN)</td>
+          <td class="col-gate">T1</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">08:45</td>
+          <td class="col-flight">AF 1066</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-af">AF</span>Air France</div></td>
+          <td class="col-city">PARIGI (CDG)</td>
+          <td class="col-gate">T2</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">09:00</td>
+          <td class="col-flight">EN 8192</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-en">EN</span>Air Dolomiti</div></td>
+          <td class="col-city">MONACO (MUC)</td>
+          <td class="col-gate">T1</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">09:50</td>
+          <td class="col-flight">LX 1678</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-lx">LX</span>SWISS</div></td>
+          <td class="col-city">ZURIGO (ZRH)</td>
+          <td class="col-gate">T2</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">10:25</td>
+          <td class="col-flight">AZ 1675</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-az">AZ</span>ITA Airways</div></td>
+          <td class="col-city">ROMA (FCO)</td>
+          <td class="col-gate">T1</td>
+          <td><span class="status st-ontime">IN ORARIO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">11:08</td>
+          <td class="col-flight">BA 520</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-ba">BA</span>British Airways</div></td>
+          <td class="col-city">LONDRA (LHR)</td>
+          <td class="col-gate">T2</td>
+          <td><span class="status st-delayed">RITARDO</span></td>
+        </tr>
+        <tr>
+          <td class="col-time">11:20</td>
+          <td class="col-flight">V7 1704</td>
+          <td><div class="airline-badge"><span class="airline-logo logo-v7">V7</span>Volotea</div></td>
+          <td class="col-city">CATANIA (CTA)</td>
+          <td class="col-gate">T1</td>
+          <td><span class="status st-landed">ATTERRATO</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Orologio digitale in tempo reale
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+</body>
+</html>
