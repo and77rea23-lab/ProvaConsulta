@@ -1,21 +1,153 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  
-  <!-- Configurazione PWA e Icone -->
-  <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
-  <link rel="icon" type="image/png" sizes="256x256" href="https://g3-app-assets-prod.glide-g3.workers.dev/p/2128dc43-677e-4415-a53c-14839cc2b777/e6011802db337b924d42bf7c18343ab8ec3085962aec54e2ece54abb589ac237/app-icon.png" />
-  <link rel="apple-touch-icon" />
-  
-  <title>Consulta FLR</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestione Disponibilità Turni</title>
+  <!-- Firebase SDK (Compat Version) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; }
+    .container { max-width: 950px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #0f172a; font-size: 22px; margin-bottom: 20px; }
+    .status-bar { text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; min-height: 35px; }
+    .active-user { color: #166534; background: #dcfce7; padding: 8px 16px; border-radius: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: center; }
+    th { background: #f8fafc; color: #334155; font-size: 14px; }
+    .emp-name { text-align: left; font-weight: bold; cursor: pointer; color: #1e40af; }
+    .emp-name:hover { text-decoration: underline; background: #eff6ff; }
+    .day-cell { cursor: pointer; user-select: none; transition: all 0.2s; font-weight: 600; font-size: 13px; }
+    .day-cell.riposo { background: #f8fafc; color: #64748b; }
+    .day-cell.disponibile { background: #22c55e !important; color: white !important; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; margin-left: 12px; font-size: 12px; }
+  </style>
 </head>
 <body>
-  <!-- Contenitore radice: Glide inietta l'intera interfaccia qui dentro -->
-  <div id="root"></div>
 
-  <!-- Script e librerie JavaScript per la resa grafica dell'app -->
+<div class="container">
+  <h1>Disponibilità Salto Riposo</h1>
+  <div class="status-bar" id="statusArea">
+    Nessun dipendente selezionato. Clicca sul tuo nome ed inserisci il PIN per modificare.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Dipendente</th>
+        <th>Lun</th><th>Mar</th><th>Mer</th><th>Gio</th><th>Ven</th><th>Sab</th><th>Dom</th>
+      </tr>
+    </thead>
+    <tbody id="shiftsTable"></tbody>
+  </table>
+</div>
+
+<script>
+  // 1. Configurazione Firebase (Sostituisci con i tuoi parametri)
+  const firebaseConfig = {
+    apiKey: "IL_TUO_API_KEY",
+    authDomain: "IL_TUO_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://IL_TUO_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "IL_TUO_PROJECT_ID",
+    storageBucket: "IL_TUO_PROJECT_ID.appspot.com",
+    messagingSenderId: "IL_TUO_SENDER_ID",
+    appId: "IL_TUO_APP_ID"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // 2. Lista Dipendenti e PIN personali
+  const dipendenti = [
+    { id: "emp1", nome: "Mario Rossi", pin: "1234" },
+    { id: "emp2", nome: "Giuseppe Verdi", pin: "5678" },
+    { id: "emp3", nome: "Luigi Bianchi", pin: "9012" }
+  ];
+
+  let currentUserId = null;
+  const giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+
+  function renderTable() {
+    const tbody = document.getElementById("shiftsTable");
+    tbody.innerHTML = "";
+
+    dipendenti.forEach(emp => {
+      const tr = document.createElement("tr");
+
+      const tdName = document.createElement("td");
+      tdName.className = "emp-name";
+      tdName.innerText = emp.nome;
+      tdName.onclick = () => loginUser(emp);
+      tr.appendChild(tdName);
+
+      giorni.forEach((_, idx) => {
+        const tdDay = document.createElement("td");
+        tdDay.className = "day-cell riposo";
+        tdDay.id = `cell-${emp.id}-${idx}`;
+        tdDay.innerText = "Riposo";
+        tdDay.onclick = () => toggleDisponibilita(emp.id, idx);
+        tr.appendChild(tdDay);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loginUser(emp) {
+    const inputPin = prompt(`Inserisci il PIN per ${emp.nome}:`);
+    if (inputPin === emp.pin) {
+      currentUserId = emp.id;
+      document.getElementById("statusArea").innerHTML = 
+        `<span class="active-user">Sessione attiva: <b>${emp.nome}</b></span>` +
+        `<button class="logout-btn" onclick="logout()">Esci</button>`;
+    } else if (inputPin !== null) {
+      alert("PIN errato!");
+    }
+  }
+
+  function logout() {
+    currentUserId = null;
+    document.getElementById("statusArea").innerText = "Nessun dipendente selezionato. Clicca sul tuo nome ed inserisci il PIN per modificare.";
+  }
+
+  function toggleDisponibilita(empId, dayIdx) {
+    if (currentUserId !== empId) {
+      alert("Puoi modificare solo il tuo turno. Clicca sul tuo nome ed inserisci il PIN.");
+      return;
+    }
+
+    const ref = db.ref(`disponibilita/${empId}/${dayIdx}`);
+    ref.once('value').then(snapshot => {
+      const currentVal = snapshot.val() || false;
+      ref.set(!currentVal);
+    });
+  }
+
+  function listenRealtimeUpdates() {
+    db.ref('disponibilita').on('value', snapshot => {
+      const data = snapshot.val() || {};
+
+      dipendenti.forEach(emp => {
+        giorni.forEach((_, idx) => {
+          const cell = document.getElementById(`cell-${emp.id}-${idx}`);
+          const isAvailable = data[emp.id] && data[emp.id][idx];
+
+          if (isAvailable) {
+            cell.classList.add("disponibile");
+            cell.innerText = "Disponibile";
+          } else {
+            cell.classList.remove("disponibile");
+            cell.innerText = "Riposo";
+          }
+        });
+      });
+    });
+  }
+
+  renderTable();
+  listenRealtimeUpdates();
+</script>
+
 </body>
 </html>
